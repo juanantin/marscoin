@@ -1,5 +1,5 @@
 /* ==========================================================================
-   STONKEX rewards indexer — Cloudflare Worker
+   SPCX rewards indexer — Cloudflare Worker
    --------------------------------------------------------------------------
    cron  → indexes forward from the saved cursor, banking totals in KV
    GET /        → the JSON the site reads (same shape as data/rewards.json)
@@ -9,16 +9,12 @@
 
 import { indexRange, makeRpc, toNumber, countHolders } from './indexer.js';
 import {
-  STREAMS, START_BLOCK, CHUNK_SIZE, MAX_CHUNKS_PER_RUN, CONFIRMATIONS,
-  DEXSCREENER_KEX_TOKEN, TOKENS, CONTRACTS, EXCLUDE_FROM_HOLDERS, holderPayout,
+  CHUNK_SIZE, MAX_CHUNKS_PER_RUN, CONFIRMATIONS, holderPayout, resolveConfig,
 } from './config.js';
 import { tokenPriceUsd } from './price.js';
 
 const STATE_KEY = 'state:v1';
 const BALANCES_KEY = 'balances:v1';
-
-const SUM_STREAMS = STREAMS.filter((s) => s.kind !== 'balances');
-const BALANCE_STREAMS = STREAMS.filter((s) => s.kind === 'balances');
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -39,27 +35,27 @@ function json(body, status = 200, extraHeaders = {}) {
   });
 }
 
-async function loadState(env) {
-  const raw = await env.STONKEX.get(STATE_KEY, 'json');
-  if (!raw) return { cursor: START_BLOCK, totals: {}, updatedAt: null, lastError: null };
+async function loadState(env, cfg) {
+  const raw = await env.MARSCOIN.get(STATE_KEY, 'json');
+  if (!raw) return { cursor: cfg.startBlock, totals: {}, updatedAt: null, lastError: null };
   return raw;
 }
 
 async function saveState(env, state) {
-  await env.STONKEX.put(STATE_KEY, JSON.stringify(state));
+  await env.MARSCOIN.put(STATE_KEY, JSON.stringify(state));
 }
 
 /** Totals live in KV as decimal strings — JSON has no BigInt. */
-function totalsToBigInt(totals) {
+function totalsToBigInt(totals, sumStreams) {
   const out = {};
-  SUM_STREAMS.forEach((s) => { out[s.id] = BigInt((totals && totals[s.id]) || '0'); });
+  sumStreams.forEach((s) => { out[s.id] = BigInt((totals && totals[s.id]) || '0'); });
   return out;
 }
 
 /* Balances are a per-address running map, kept across runs. Each scan returns
    deltas for the blocks it covered, which are added in here. */
 async function loadBalances(env) {
-  return (await env.STONKEX.get(BALANCES_KEY, 'json')) || {};
+  return (await env.MARSCOIN.get(BALANCES_KEY, 'json')) || {};
 }
 
 function mergeDeltas(stored, deltas) {
@@ -71,10 +67,10 @@ function mergeDeltas(stored, deltas) {
   return stored;
 }
 
-function holderCount(balances) {
+function holderCount(balances, exclude) {
   const filtered = {};
   for (const a in balances) {
-    if (EXCLUDE_FROM_HOLDERS.indexOf(a) === -1) filtered[a] = balances[a];
+    if (exclude.indexOf(a) === -1) filtered[a] = balances[a];
   }
   return countHolders(filtered);
 }
@@ -85,42 +81,42 @@ function totalsToStrings(totals) {
   return out;
 }
 
-/** $STONKEX price in USD, or null. Never fatal — the totals matter more. */
-function kexPriceUsd(fetchImpl) {
-  return tokenPriceUsd(DEXSCREENER_KEX_TOKEN, TOKENS.KEX, fetchImpl);
+/** $SPCX price in USD, or null. Never fatal — the totals matter more. */
+function spcxPriceUsd(cfg, fetchImpl) {
+  return tokenPriceUsd(cfg.spcxTokenUrl, cfg.tokens.SPCX, fetchImpl);
 }
 
-async function sync(env, ctx) {
+async function sync(env, ctx, cfg) {
   const rpc = makeRpc(env.RPC_URL);
-  const state = await loadState(env);
+  const state = await loadState(env, cfg);
 
   const head = parseInt(await rpc('eth_blockNumber'), 16) - CONFIRMATIONS;
   if (!isFinite(head) || head <= 0) throw new Error('bad head block');
 
-  const running = totalsToBigInt(state.totals);
-  let balances = BALANCE_STREAMS.length ? await loadBalances(env) : null;
+  const running = totalsToBigInt(state.totals, cfg.sumStreams);
+  let balances = cfg.balanceStreams.length ? await loadBalances(env) : null;
 
   if (state.cursor <= head) {
     const res = await indexRange({
       rpc,
-      streams: STREAMS,
+      streams: cfg.streams,
       from: state.cursor,
       to: head,
       chunkSize: CHUNK_SIZE,
       maxChunks: MAX_CHUNKS_PER_RUN,
     });
 
-    SUM_STREAMS.forEach((s) => { running[s.id] += res.totals[s.id]; });
-    BALANCE_STREAMS.forEach((s) => { balances = mergeDeltas(balances, res.balances[s.id]); });
+    cfg.sumStreams.forEach((s) => { running[s.id] += res.totals[s.id]; });
+    cfg.balanceStreams.forEach((s) => { balances = mergeDeltas(balances, res.balances[s.id]); });
 
     state.cursor = res.cursor;
     state.complete = res.complete;
     state.chunksLastRun = res.chunksUsed;
 
-    if (balances) await env.STONKEX.put(BALANCES_KEY, JSON.stringify(balances));
+    if (balances) await env.MARSCOIN.put(BALANCES_KEY, JSON.stringify(balances));
   }
 
-  state.holders = balances ? holderCount(balances) : null;
+  state.holders = balances ? holderCount(balances, cfg.exclude) : null;
   state.addressesTracked = balances ? Object.keys(balances).length : null;
   state.totals = totalsToStrings(running);
   state.head = head;
@@ -132,24 +128,24 @@ async function sync(env, ctx) {
 }
 
 /** Shape the site expects. Unknown values stay null so tiles show a dash. */
-function present(state, kex) {
-  const totals = totalsToBigInt(state.totals);
+function present(state, spcx, cfg) {
+  const totals = totalsToBigInt(state.totals, cfg.sumStreams);
   const byId = {};
-  SUM_STREAMS.forEach((s) => { byId[s.id] = toNumber(totals[s.id], s.decimals); });
+  cfg.sumStreams.forEach((s) => { byId[s.id] = toNumber(totals[s.id], s.decimals); });
 
   const feesIn = byId.feesIn ?? 0;
-  const feesUsd = kex != null ? feesIn * kex : null;
+  const feesUsd = spcx != null ? feesIn * spcx : null;
   // Strip the protocol's cut off the outflow, so "distributed" is what holders
   // actually received rather than everything that left the contract.
   const distributed = holderPayout(byId);
 
   return {
     totalDistributed: distributed,
-    totalDistributedUsd: kex != null ? distributed * kex : null,
+    totalDistributedUsd: spcx != null ? distributed * spcx : null,
     // Cumulative fees valued at the CURRENT price, not the price at the time of
     // each transfer. Good enough for a headline figure; say so if it matters.
     totalFeesCollected: feesUsd,
-    // Same fees expressed in $STONKEX, for the token chip beside the dollars.
+    // Same fees expressed in $SPCX, for the token chip beside the dollars.
     totalFeesTokens: feesIn,
 
     // Counted from transfers, so no explorer is involved. Only trustworthy once
@@ -158,17 +154,21 @@ function present(state, kex) {
 
     updatedAt: state.updatedAt,
     meta: {
+      configured: true,
       synced: !!state.complete,
       blocksBehind: state.head && state.cursor ? Math.max(0, state.head - state.cursor + 1) : null,
-      kexPriceUsd: kex,
+      spcxPriceUsd: spcx,
     },
   };
 }
 
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(sync(env, ctx).catch(async (err) => {
-      const state = await loadState(env);
+    const cfg = resolveConfig(env);
+    // No token addresses yet — a scan would sum an empty filter and bank zeros.
+    if (!cfg.configured) return;
+    ctx.waitUntil(sync(env, ctx, cfg).catch(async (err) => {
+      const state = await loadState(env, cfg);
       state.lastError = String(err && err.message || err);
       state.updatedAt = new Date().toISOString();
       await saveState(env, state);
@@ -177,6 +177,7 @@ export default {
 
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const cfg = resolveConfig(env);
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
@@ -185,12 +186,29 @@ export default {
       if (!env.ADMIN_TOKEN || auth !== 'Bearer ' + env.ADMIN_TOKEN) {
         return json({ error: 'unauthorized' }, 401);
       }
-      await env.STONKEX.delete(STATE_KEY);
-      await env.STONKEX.delete(BALANCES_KEY);
-      return json({ ok: true, message: 'state cleared; next cron rescans from ' + START_BLOCK });
+      await env.MARSCOIN.delete(STATE_KEY);
+      await env.MARSCOIN.delete(BALANCES_KEY);
+      return json({ ok: true, message: 'state cleared; next cron rescans from ' + cfg.startBlock });
     }
 
-    const state = await loadState(env);
+    if (!cfg.configured) {
+      return json({
+        error: 'not configured',
+        message: 'Set TOKENS.MARS, TOKENS.SPCX, CONTRACTS.rewardsIndex and ' +
+                 'START_BLOCK in worker/src/config.js, then redeploy.',
+        // The site reads these keys; null keeps the tiles on a dash rather
+        // than printing a zero that looks like a real total.
+        totalDistributed: null,
+        totalDistributedUsd: null,
+        totalFeesCollected: null,
+        totalFeesTokens: null,
+        holders: null,
+        updatedAt: null,
+        meta: { configured: false, synced: false, blocksBehind: null, spcxPriceUsd: null },
+      }, 200, { 'cache-control': 'no-store' });
+    }
+
+    const state = await loadState(env, cfg);
 
     if (url.pathname === '/debug') {
       return json({
@@ -201,30 +219,30 @@ export default {
         chunksLastRun: state.chunksLastRun ?? null,
         updatedAt: state.updatedAt,
         lastError: state.lastError,
-        startBlock: START_BLOCK,
+        startBlock: cfg.startBlock,
         holders: state.holders ?? null,
         addressesTracked: state.addressesTracked ?? null,
         rawTotals: state.totals,          // base units, as indexed
-        streams: STREAMS.map((s) => ({
+        streams: cfg.streams.map((s) => ({
           id: s.id, kind: s.kind || 'sum', token: s.token,
           from: s.from || null, to: s.to || null,
         })),
-        contracts: CONTRACTS,
+        contracts: cfg.contracts,
       }, 200, { 'cache-control': 'no-store' });
     }
 
     // Let a manual GET /sync push it along too, handy while backfilling.
     if (url.pathname === '/sync') {
       try {
-        const next = await sync(env, ctx);
-        const price = await kexPriceUsd();
-        return json(present(next, price), 200, { 'cache-control': 'no-store' });
+        const next = await sync(env, ctx, cfg);
+        const price = await spcxPriceUsd(cfg);
+        return json(present(next, price, cfg), 200, { 'cache-control': 'no-store' });
       } catch (err) {
         return json({ error: String(err && err.message || err) }, 502, { 'cache-control': 'no-store' });
       }
     }
 
-    const price = await kexPriceUsd();
-    return json(present(state, price));
+    const price = await spcxPriceUsd(cfg);
+    return json(present(state, price, cfg));
   },
 };

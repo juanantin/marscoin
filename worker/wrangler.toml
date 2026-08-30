@@ -1,4 +1,4 @@
-name = "stonkex-rewards"
+name = "marscoin-rewards"
 main = "src/index.js"
 compatibility_date = "2026-08-01"
 
@@ -7,13 +7,24 @@ compatibility_date = "2026-08-01"
 [triggers]
 crons = ["* * * * *"]
 
-# Create with:  wrangler kv namespace create STONKEX
+# Create with:  wrangler kv namespace create MARSCOIN
 # then paste the id it prints here.
 [[kv_namespaces]]
-binding = "STONKEX"
+binding = "MARSCOIN"
 id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
 
 [vars]
+# --- The token this Worker indexes ---------------------------------------
+# src/config.js ships unset, so fill these in (or edit the constants there).
+# Until all four are set the Worker skips its cron and serves nulls with
+# meta.configured = false, rather than a confident row of zeros.
+# TOKEN_MARS    = "0x…"   # $MARSCOIN — the token people buy
+# TOKEN_SPCX    = "0x…"   # $SPCX — the reward token
+# POOL          = "0x…"   # the $MARSCOIN pool, priced by DexScreener
+# FEE_LOCKER    = "0x…"   # excluded from the holder count
+# REWARDS_INDEX = "0x…"   # the distributor: fees in, rewards out
+# START_BLOCK   = 0       # the block $MARSCOIN launched at
+
 # A Base RPC. The public endpoint works but rate-limits hard during backfill —
 # an Alchemy or QuickNode URL is worth it. Set a private one as a secret
 # instead:  wrangler secret put RPC_URL

@@ -1,6 +1,6 @@
-# STONKEX Strategy
+# MARSCOIN
 
-Single-page site for **Stonk Exchange Strategy** — buy `$STONKEXSTR`, get `$STONKEX`.
+Single-page site for **MARSCOIN** — buy `$MARSCOIN`, get `$SPCX`.
 1B total supply on Base chain.
 
 Static HTML/CSS/JS. No build step, no dependencies, no framework.
@@ -17,12 +17,12 @@ images/               branding
 
 - **Link bar** — X, chart, and a contract-address button that copies the CA to the
   clipboard and flashes a `COPIED!` confirmation.
-- **Hero** — the animated STONKEX Strategy banner, looping silently. The poster is
+- **Hero** — the animated MARSCOIN banner, looping silently. The poster is
   the clip's own first frame, so poster → playback is seamless. Viewers with
   `prefers-reduced-motion: reduce` get the poster as a still and the video never
   downloads.
-- **Dashboard** — six live tiles: total `$STONKEX` distributed (tokens plus its
-  USD value), total fees collected (USD plus the same figure in `$STONKEX`),
+- **Dashboard** — six live tiles: total `$SPCX` distributed (tokens plus its
+  USD value), total fees collected (USD plus the same figure in `$SPCX`),
   total holders, market cap, liquidity and 24h volume. Values blink a `…`
   placeholder until the first load resolves.
 - **Ecosystem** — the [The Stonks Exchange](https://www.thestonks.exchange/) and
@@ -40,21 +40,28 @@ renders as `—` rather than as a number that isn't real.
 | Market cap, liquidity, 24h volume | DexScreener | live, no key |
 | Holders | Blockscout → Routescan → … | live, no key |
 | Total fees collected | project rewards API | **needs `sources.rewards.url`** |
-| Total $STONKEX distributed | project rewards API | **needs `sources.rewards.url`** |
+| Total $SPCX distributed | project rewards API | **needs `sources.rewards.url`** |
 
 ### Addresses
 
-| | |
-|---|---|
-| `$STONKEXSTR` | `0x80081d759E5e0154fB15D5ee8De5085D89E3dCcC` |
-| `$STONKEX` (reward token) | `0x5ab000ff9B9FfE0349CE5ffA5fD86f217C3680F5` |
-| Pool | `0x550b95fcb0e309c552FAe9670b1A514D443CA463` |
-| Fee locker | `0x71D1D363176723f85d98B8B430DF33cde89f0A7f` |
-| Rewards index | `0xf01a4dabfd54d1A6a1812a95F7151e8DA851DE2E` |
+**None are set yet.** Every address in `config.js` is an empty string, so the CA
+button reports `NO ADDRESS SET`, the chart pill is inert, and every market tile
+shows an em dash. Nothing on the page invents a figure in the meantime.
 
-The reward token is the `quote` side of this token's pair in `/api/coins`, where
-the same address is listed as "The Stonks Exchange" (STONKEX) — note a second,
-earlier token also carries that name, so match on the address, not the symbol.
+Fill these in — `config.js` for the site, `worker/src/config.js` (or wrangler
+`[vars]`) for the indexer:
+
+| | `config.js` | `worker/src/config.js` |
+|---|---|---|
+| `$MARSCOIN` — the token people buy | `contractAddress` | `TOKENS.MARS` |
+| `$SPCX` — the reward token | `rewardTokenAddress` | `TOKENS.SPCX` |
+| Pool, priced by DexScreener | `contracts.pool` | `CONTRACTS.pool` |
+| Fee locker | `contracts.feeLocker` | `CONTRACTS.feeLocker` |
+| Rewards index — the distributor | `contracts.rewardsIndex` | `CONTRACTS.rewardsIndex` |
+| Launch block | — | `START_BLOCK` |
+
+Match the reward token on its **address**, not its symbol: ticker collisions are
+common, and the wrong one silently prices every reward figure wrong.
 
 ### Market data — DexScreener
 
@@ -62,7 +69,7 @@ The known pool is queried first — `GET /latest/dex/pairs/base/<pool>` — fall
 back to the token search, `GET /latest/dex/tokens/<contract>`. Public, no key,
 CORS-enabled.
 
-Pool-first matters here: `$STONKEXSTR` trades against `$STONKEX` rather than a
+Pool-first matters here: `$MARSCOIN` trades against `$SPCX` rather than a
 usual quote, and the token search can come back empty for a pair like that while
 the pool itself resolves fine. Of any list of pairs, the deepest-liquidity one on
 `chain` wins; `marketCap` is preferred over `fdv`. Pool addresses live in
@@ -71,7 +78,7 @@ the pool itself resolves fine. Of any list of pairs, the deepest-liquidity one o
 ### Holders — Blockscout
 
 DexScreener does not report holder counts, and no single explorer is dependable
-for a token this new — Blockscout was answering `0` for `$STONKEXSTR`, which just
+for a token this new — Blockscout was answering `0` for `$MARSCOIN`, which just
 means it hadn't indexed the holders yet.
 
 So `sources.holders.providers` lists several, tried **in order**, and the first
@@ -85,7 +92,7 @@ to return a count above zero wins:
 | `moralis` | `moralisApiKey` | Free tier is enough |
 
 **The dependable answer is [`worker/`](worker/), not any of these.** It counts
-holders from `$STONKEXSTR` transfer history — every transfer folded into a
+holders from `$MARSCOIN` transfer history — every transfer folded into a
 running balance per address, then addresses with a positive balance counted,
 with the pool and fee contracts excluded. No explorer involved, so nothing to
 guess at. Once it is deployed and synced it supplies `holders` through
@@ -101,7 +108,7 @@ Run with `?debug=1` to see which provider answered.
 
 ### Rewards — feeding fees and distribution
 
-Fees collected and `$STONKEX` distributed are protocol figures. No explorer
+Fees collected and `$SPCX` distributed are protocol figures. No explorer
 knows them, so they have to be fed in. Three ways, cheapest first.
 
 **1. Edit the committed file.** `sources.rewards.url` already points at
@@ -112,7 +119,7 @@ infrastructure:
 { "totalFeesCollected": 1284.37, "totalDistributed": 8412906.5 }
 ```
 
-Leave `totalDistributedUsd` out and it is derived from the live `$STONKEX`
+Leave `totalDistributedUsd` out and it is derived from the live `$SPCX`
 price. Any field left `null` shows as an em dash, so the file is safe to publish
 half-filled. Fine for a launch; it is a manual number, so it goes stale between
 pushes.
@@ -145,8 +152,8 @@ the backfill takes longer. `workflow_dispatch` lets you trigger a run by hand.
 serving over HTTP instead of committing a file. Better if you want sub-minute
 freshness or would rather not commit state to the repo.
 
-It scans `eth_getLogs` for `$STONKEX` Transfer events, filtered by counterparty,
-from the token's launch block (**50530608**) forward — so the range is bounded,
+It scans `eth_getLogs` for `$SPCX` Transfer events, filtered by counterparty,
+from the token's launch block (`START_BLOCK`) forward — so the range is bounded,
 not all of chain history. Each run takes a bite, banks running totals in KV, and
 saves its cursor, so backfill is just several runs. Only the standard Transfer
 event is used, meaning none of it needs the rewards contract's ABI.
@@ -155,7 +162,7 @@ Deploy instructions, routes and tests are in [`worker/README.md`](worker/README.
 Once it is up:
 
 ```js
-url: ['https://stonkex-rewards.<you>.workers.dev', 'data/rewards.json'],
+url: ['https://marscoin-rewards.<you>.workers.dev', 'data/rewards.json'],
 ```
 
 The streams were verified against Stockify's own panel for this token and now
@@ -163,12 +170,12 @@ agree to the cent:
 
 | | Stockify | Indexer |
 |---|---|---|
-| Fees collected | 77,671.73 STONKEX | 77,671.73 |
-| Paid to holders | 69,904.56 STONKEX | 69,904.56 |
+| Fees collected | 77,671.73 SPCX | 77,671.73 |
+| Paid to holders | 69,904.56 SPCX | 69,904.56 |
 
 Two things were wrong before that check. `feesIn` watched the platform's fee
 locker, which **every** coin on thestonks.exchange shares, so it summed the whole
-platform: 3,548,527 STONKEX against a true 77,672. And "distributed" summed
+platform: 3,548,527 SPCX against a true 77,672. And "distributed" summed
 everything leaving the rewards contract, which is fees collected, not the
 holders' share — the two differ by the protocol's 10%.
 
@@ -186,7 +193,7 @@ Append `?debug=1` to the URL. A panel under the dashboard lists every source and
 what it returned, and the same detail goes to the console:
 
 ```
-✓ ok     dexscreener:pair:0x550b95fc…
+✓ ok     dexscreener:pair:0x…
 · empty  holders:blockscout
 ✓ ok     holders:blockscout:counters
 ```
@@ -229,21 +236,27 @@ the page falls back to `execCommand` elsewhere.)
 
 ## Notes
 
-- Light theme only, by design — the brand artwork is built for a white ground.
-- Both ecosystem lockups sit on the same white plate at a matched size. The
-  Stonks.Exchange wordmark shipped near-white (built for a dark background), so
-  `images/stonkex_button.png` has had that wordmark recoloured dark — the icon and
-  the blue `.EXCHANGE` are untouched. Swap in an official light-background lockup
-  if Stonks.Exchange publishes one.
-- `favicon.png` and `apple-touch-icon.png` are generated from
-  `images/stkstr_icon.png`. Regenerate them together if the mark changes
+- Dark theme only, by design — the brand artwork is built for a black ground.
+  Type is JetBrains Mono throughout the chrome, Inter for the fine print.
+- Both ecosystem cards are photographs (`images/launch.png`, `images/dome.png`)
+  bled to the card edge and faded into the surface behind the copy, so the two
+  partner names are set as text rather than as supplied lockups.
+- `favicon.ico`, `images/favicon.png`, `images/apple-touch-icon.png` and the two
+  manifest icons are all generated from `images/marscoin_logo.png`, cropped to
+  the artwork's own bounds. Regenerate them together if the mark changes
   (apple-touch-icon is flattened onto white — iOS renders transparency as black).
-  `images/logo.png` came from the same source and is kept unused, in case the
-  mark ever returns to the link bar.
-- `images/stonkex_header.mp4` is the source clip stripped of its audio track and
-  re-encoded (2.2MB → 627KB). It is **768×384**, so it is upscaled roughly 2.5× on a
-  desktop retina screen and looks soft there — re-export at 1536×768 or larger and
-  drop it in if you want it crisp. `images/stonkex_header.png` is kept only as the
-  Open Graph share image.
+- `images/marscoin_header.mp4` is the hero clip. It is **768×384**, so it is
+  upscaled roughly 2.5× on a desktop retina screen and looks soft there —
+  re-export at 1536×768 or larger and drop it in if you want it crisp. It plays
+  at **half speed**: the rate is set through `defaultPlaybackRate`, because the
+  media load algorithm resets `playbackRate` to it on `load()`.
+  `images/marscoin_og.jpg` is the 1200×630 Open Graph share image, cut from the
+  clip's first frame.
+- The hero copy sits over the planet from 760px up, and drops beneath the clip
+  below that, where there is no room to overlay it legibly.
+- Tile sparklines are drawn from a short history the browser keeps in
+  `localStorage` as the dashboard polls — this visitor's own record of the
+  figures. Nothing is seeded or back-filled, so a fresh browser shows no lines
+  until `sparklines.minPoints` refreshes have happened.
 - On mobile the hero runs edge to edge, the dashboard drops to two tiles per row, and
-  the ecosystem blocks centre. Tested at 390px wide with no horizontal overflow.
+  the ecosystem blocks stack. Tested at 390px wide with no horizontal overflow.

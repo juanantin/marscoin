@@ -8,7 +8,7 @@ import {
   isRangeTooLarge, indexRange, TRANSFER_TOPIC,
 } from '../src/indexer.js';
 
-const KEX = '0x5ab000ff9B9FfE0349CE5ffA5fD86f217C3680F5';
+const SPCX = '0x5ab000ff9B9FfE0349CE5ffA5fD86f217C3680F5';
 const DIST = '0xf01a4dabfd54d1A6a1812a95F7151e8DA851DE2E';
 
 const word = (n) => '0x' + BigInt(n).toString(16).padStart(64, '0');
@@ -34,7 +34,7 @@ function fakeRpc(transfersByBlock, opts = {}) {
   return { rpc, calls };
 }
 
-const stream = { id: 'distributed', token: KEX, from: DIST, decimals: 18 };
+const stream = { id: 'distributed', token: SPCX, from: DIST, decimals: 18 };
 
 test('address is left-padded to a 32-byte topic', () => {
   const t = addressTopic(DIST);
@@ -117,7 +117,7 @@ test('gives up on a non-range error rather than looping', async () => {
 });
 
 test('tracks several streams independently in one pass', async () => {
-  const feeStream = { id: 'feesIn', token: KEX, to: DIST, decimals: 18 };
+  const feeStream = { id: 'feesIn', token: SPCX, to: DIST, decimals: 18 };
   const rpc = async (_m, [f]) => {
     const isFrom = f.topics[1] !== null && f.topics.length === 2;
     return [{ data: word(isFrom ? 10n ** 18n : 7n * 10n ** 18n) }];
@@ -184,7 +184,7 @@ test('counts holders across a chunked scan', async () => {
     const from = parseInt(f.fromBlock, 16), to = parseInt(f.toBlock, 16);
     return Object.entries(byBlock).filter(([b]) => +b >= from && +b <= to).map(([, l]) => l);
   };
-  const stream = { id: 'holders', kind: 'balances', token: KEX, decimals: 18 };
+  const stream = { id: 'holders', kind: 'balances', token: SPCX, decimals: 18 };
   const res = await indexRange({ rpc, streams: [stream], from: 0, to: 299, chunkSize: 100 });
 
   assert.equal(res.balances.holders[A], 200n);   // 500 − 200 − 100

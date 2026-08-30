@@ -1,7 +1,7 @@
-# STONKEX rewards indexer
+# SPCX rewards indexer
 
-Sums `$STONKEX` flows on Base and serves them as the JSON the site reads, so
-"total fees collected" and "total $STONKEX distributed" stay current without
+Sums `$SPCX` flows on Base and serves them as the JSON the site reads, so
+"total fees collected" and "total $SPCX distributed" stay current without
 anyone editing a file.
 
 A browser can't do this — scanning transfer logs across Base history on every
@@ -28,7 +28,7 @@ cd worker
 npm install -g wrangler        # if you don't have it
 wrangler login
 
-wrangler kv namespace create STONKEX   # paste the id into wrangler.toml
+wrangler kv namespace create MARSCOIN   # paste the id into wrangler.toml
 wrangler secret put RPC_URL            # a Base RPC; public one rate-limits
 wrangler secret put ADMIN_TOKEN        # any random string, guards /reset
 
@@ -38,7 +38,7 @@ wrangler deploy
 Then point the site at it — in the repo root `config.js`:
 
 ```js
-sources: { rewards: { url: ['https://stonkex-rewards.<you>.workers.dev', 'data/rewards.json'] } }
+sources: { rewards: { url: ['https://marscoin-rewards.<you>.workers.dev', 'data/rewards.json'] } }
 ```
 
 The array is a fallback chain, so the committed file still covers you if the
@@ -56,21 +56,31 @@ Worker is down.
 After deploying, watch `/debug` until `blocksBehind` reaches 0. `lastError` is
 where RPC trouble shows up.
 
-## ⚠ Verify the streams before trusting the numbers
+## ⚠ Configure it first, then verify the streams
 
-The addresses in `src/config.js` come from thestonks.exchange's own APIs, but
-**which flow is "fees" and which is "distributed" has not been confirmed against
-the contracts.** As written:
+`src/config.js` ships **unset**: no addresses, `START_BLOCK` at 0. In that state
+`resolveConfig()` reports `configured: false`, the cron does not run, and `GET /`
+answers with nulls and `meta.configured: false` — never a row of zeros that would
+read as real totals on the site.
 
-- `distributed` — `$STONKEX` leaving `rewardsIndex` (`0xf01a4dab…51DE2E`).
-  If that contract serves other tokens as well, this over-counts.
-- `feesIn` — `$STONKEX` arriving at `feeLocker` (`0x71D1D363…f0A7f`). That
-  locker is shared by every coin on the platform, so this one almost certainly
-  over-counts as written. **Fix this first.**
+Set `TOKENS.MARS`, `TOKENS.SPCX`, `CONTRACTS.rewardsIndex` and `START_BLOCK`
+(plus `pool` and `feeLocker`), either in that file or as wrangler `[vars]` of the
+same name — `TOKEN_MARS`, `TOKEN_SPCX`, `POOL`, `FEE_LOCKER`, `REWARDS_INDEX`,
+`START_BLOCK` — which override the file, so one build can serve any token.
 
-Sanity-check `/debug`'s `rawTotals` against what thestonks.exchange shows for
-the token before pointing the site at the Worker. Adjust `STREAMS` in
-`src/config.js`, then `POST /reset` to rescan.
+Then confirm **which flow is "fees" and which is "distributed"** against the
+contracts. As written:
+
+- `feesIn` — `$SPCX` arriving at `rewardsIndex`. Point this at the rewards
+  contract, never at a launchpad's shared fee locker: that locker collects for
+  every coin on the platform, so watching it sums the whole platform's fees.
+- `distributed` — `$SPCX` leaving `rewardsIndex`, less the protocol's cut
+  (`HOLDER_SHARE`, or exactly via `PROTOCOL_ADDRESS`). If that contract serves
+  other tokens as well, this over-counts.
+
+Sanity-check `/debug`'s `rawTotals` against the rewards dashboard for the token
+before pointing the site at the Worker. Adjust `STREAMS` in `src/config.js`, then
+`POST /reset` to rescan.
 
 If `rewardsIndex` turns out to be verified on Basescan and exposes a cumulative
 total as a view function, a single `eth_call` beats this whole approach — read
@@ -78,7 +88,7 @@ it directly and skip the log scan.
 
 ## Notes
 
-- `totalFeesCollected` values cumulative fees at the **current** `$STONKEX`
+- `totalFeesCollected` values cumulative fees at the **current** `$SPCX`
   price, not the price at the time of each transfer. Fine for a headline
   number; if you need true cost basis, capture the price per block instead.
 - `START_BLOCK` is the token's launch block from `/api/coins`, so the scan
