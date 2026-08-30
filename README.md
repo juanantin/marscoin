@@ -223,6 +223,20 @@ line of the panel is the build stamp. If it is not the version you just pushed,
 the problem is the deploy or a cache, not the code — hard-refresh, purge the
 CDN, and confirm the host is building the right branch.
 
+## Deploying
+
+`index.html` loads the stylesheet, `config.js` and `app.js` with a `?v=` query,
+and a CDN keys its cache on the full URL. **Change any of them without changing
+that query and browsers keep serving the old file** — the change is pushed,
+deployed, and invisible. So make this the last step before every deploy:
+
+```bash
+node scripts/stamp.mjs        # today's date, next free suffix
+```
+
+It rewrites every `?v=` in `index.html` and the matching `version:` in
+`config.js`, so the `?debug=1` panel names the build the browser actually has.
+
 ## Running it
 
 Any static host works — GitHub Pages, Netlify, Vercel, Cloudflare Pages, S3. Locally:
