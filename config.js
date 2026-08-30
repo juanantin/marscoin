@@ -20,16 +20,18 @@ window.MARSCOIN_CONFIG = {
 
   /* ---- Token ----------------------------------------------------------
 
-     ⚠ BOTH ADDRESSES ARE EMPTY. Until they are filled in:
-         · the CA button says "NO ADDRESS SET" instead of copying
-         · the CHART pill is inert
-         · every market tile shows an em dash, because no lookup can run
+     $MARSCOIN is set; the reward token is not. With only the first filled in:
+         · the CA button copies, and the CHART pill links to DexScreener
+         · market cap, liquidity, 24h volume and holders all resolve
+         · "total fees" and "total $SPCX distributed" stay on an em dash —
+           those are protocol figures, so they need sources.rewards below
+         · a USD value for distributed rewards cannot be derived until
+           rewardTokenAddress is set
 
-     Fill them in and everything switches on — no other file needs editing.
      Use the full 42-character 0x… address, checksummed or lowercase. */
 
   // $MARSCOIN on Base — the token people buy, and the one the CA button copies.
-  contractAddress: '',
+  contractAddress: '0x61199398e8c51d6Cde7d5D2Ff579A3065340826b',
 
   // $SPCX, the reward token. Used to price "total distributed" in USD when the
   // rewards source doesn't already give a USD figure.
@@ -61,9 +63,7 @@ window.MARSCOIN_CONFIG = {
     // linking somewhere broken.
     chart: null,
 
-    // Recorded for reference only — the two ecosystem cards show the partners'
-    // lockups and deliberately do not link anywhere. Wrap either card's markup
-    // in an <a> in index.html if that should change.
+    // Each ecosystem card's lockup plate links to its partner.
     launchedIn: 'https://www.thestonks.exchange/',
     rewardsBy: 'https://www.stockify.finance/',
   },
