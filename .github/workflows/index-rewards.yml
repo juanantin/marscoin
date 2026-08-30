@@ -1,8 +1,11 @@
 name: Index rewards
 
-# Keeps data/rewards.json current by scanning Base for $STONKEX flows and
-# $STONKEXSTR holders. State lives in data/rewards-state.json, so each run
+# Keeps data/rewards.json current by scanning Base for $SPCX flows and
+# $MARSCOIN holders. State lives in data/rewards-state.json, so each run
 # resumes where the last one stopped — a first backfill may take a few runs.
+#
+# Until a token is configured in worker/src/config.js the scan exits 78 and the
+# run ends green with nothing written.
 
 on:
   schedule:
@@ -29,16 +32,27 @@ jobs:
           node-version: '20'
 
       - name: Scan
+        id: scan
         # Optional: set an RPC_URL secret to a private Base endpoint. The public
         # one works but rate-limits, which just means the backfill takes longer.
         env:
           RPC_URL: ${{ secrets.RPC_URL || 'https://mainnet.base.org' }}
-        run: node scripts/index-rewards.mjs
+        run: |
+          set +e
+          node scripts/index-rewards.mjs
+          code=$?
+          set -e
+          # 78 = EX_CONFIG: no token set yet. Not a failure, just nothing to do.
+          if [ "$code" -eq 78 ]; then
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit "$code"
 
       - name: Commit if anything changed
         # always(): a partial scan is still progress, and dropping it would mean
         # a rate-limited RPC could never finish the backfill.
-        if: always()
+        if: always() && steps.scan.outputs.skipped != 'true'
         run: |
           set -u
           if git diff --quiet -- data/ && git diff --quiet --cached -- data/; then

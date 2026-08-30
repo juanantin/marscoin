@@ -1,69 +1,74 @@
 /* ==========================================================================
    What the indexer watches.
    --------------------------------------------------------------------------
-   ⚠ The addresses below come from thestonks.exchange's own APIs, but which
-   flow represents "fees collected" versus "distributed" has NOT been confirmed
-   against the contracts. Check /debug after the first sync and adjust before
-   trusting the numbers — see worker/README.md.
+   ⚠ NOT YET CONFIGURED. Every address below is empty and START_BLOCK is 0, so
+   the Worker reports `configured: false` and serves nulls rather than zeros —
+   see CONFIGURED at the foot of this file. Fill in the four addresses and the
+   launch block, then check /debug after the first sync and confirm which flow
+   is "fees collected" versus "distributed" before trusting the numbers.
+   worker/README.md walks through it.
    ========================================================================== */
 
 export const CHAIN_ID = 8453;                    // Base
 
 export const TOKENS = {
-  // $STONKEXSTR — the token people buy
-  STR: '0x80081d759E5e0154fB15D5ee8De5085D89E3dCcC',
-  // $STONKEX — the reward token, 18 decimals
-  KEX: '0x5ab000ff9B9FfE0349CE5ffA5fD86f217C3680F5',
+  // $MARSCOIN — the token people buy
+  MARS: '',
+  // $SPCX — the reward token, 18 decimals
+  SPCX: '',
 };
 
 export const CONTRACTS = {
-  pool: '0x550b95fcb0e309c552FAe9670b1A514D443CA463',
-  feeLocker: '0x71D1D363176723f85d98B8B430DF33cde89f0A7f',
-  // /api/fee-routing reports this token routes to "rewards" via this contract
-  rewardsIndex: '0xf01a4dabfd54d1A6a1812a95F7151e8DA851DE2E',
+  pool: '',
+  feeLocker: '',
+  // The "rewards" routing target — the contract fees are distributed from
+  rewardsIndex: '',
 };
 
-// The block $STONKEXSTR launched at, per /api/coins. Nothing relevant happened
-// before it, so the scan starts here rather than at genesis.
-export const START_BLOCK = 50530608;
+// The block $MARSCOIN launched at. Nothing relevant happened before it, so the
+// scan starts there rather than at genesis — a backfill from 0 would take days.
+export const START_BLOCK = 0;
 
-/* Verified against Stockify's own panel for this token
-   (stockify.finance, contract 0xf01a4dab…51DE2E), which reported:
+/* What each stream means, and why it is shaped this way:
 
-     fees collected   77,671.73 STONKEX  ($125)
-     paid to holders  69,904.56 STONKEX  ($113)   ← exactly 90% of the above
-     split            90% holders · 10% protocol · 0% creator
-     waiting          0 STONKEX
-
-   `feesIn` — $STONKEX arriving at the rewards contract. That IS "fees
-   collected". It previously watched the fee locker, which every coin on the
-   platform shares, so it was summing the whole platform's fees: 3,548,527
-   STONKEX against a true 77,672.
+   `feesIn` — $SPCX arriving at the rewards contract. That IS "fees collected".
+   Watch the rewards contract, NOT the fee locker: on a launchpad the locker is
+   shared by every coin on the platform, so pointing at it sums the whole
+   platform's fees instead of this token's.
 
    `paidOut` — everything leaving the rewards contract: the holder payments
-   plus the protocol's 10%. Not the number the tile wants on its own.
+   plus the protocol's cut. Not the number the tile wants on its own, which is
+   why HOLDER_SHARE below exists.
 
-   `holders` — every $STONKEXSTR transfer folded into a running balance per
-   address; addresses left holding something are the holder count. */
-export const STREAMS = [
-  { id: 'feesIn', kind: 'sum', token: TOKENS.KEX, to: CONTRACTS.rewardsIndex, decimals: 18 },
-  { id: 'paidOut', kind: 'sum', token: TOKENS.KEX, from: CONTRACTS.rewardsIndex, decimals: 18 },
-  { id: 'holders', kind: 'balances', token: TOKENS.STR, decimals: 18 },
-];
+   `holders` — every $MARSCOIN transfer folded into a running balance per
+   address; addresses left holding something are the holder count.
 
-/* Share of the outflow that reaches holders, from Stockify's "TO HOLDERS 90% ·
-   10% protocol · 0% creator". Update it if that split ever changes — or set
-   PROTOCOL_ADDRESS below and the protocol's share is subtracted exactly
+   Check all three against the rewards dashboard for this token after the
+   first sync — /debug prints the raw totals. */
+/* Share of the outflow that reaches holders. Set it to this token's split as
+   the rewards dashboard reports it (0.9 = "90% holders · 10% protocol") — or
+   set PROTOCOL_ADDRESS below and the protocol's share is subtracted exactly
    instead, which survives any change to the percentage. */
 export const HOLDER_SHARE = 0.9;
 export const PROTOCOL_ADDRESS = null;
 
-if (PROTOCOL_ADDRESS) {
-  STREAMS.push({
-    id: 'protocolOut', kind: 'sum', token: TOKENS.KEX,
-    from: CONTRACTS.rewardsIndex, to: PROTOCOL_ADDRESS, decimals: 18,
-  });
+export function buildStreams(tokens, contracts) {
+  const streams = [
+    { id: 'feesIn', kind: 'sum', token: tokens.SPCX, to: contracts.rewardsIndex, decimals: 18 },
+    { id: 'paidOut', kind: 'sum', token: tokens.SPCX, from: contracts.rewardsIndex, decimals: 18 },
+    { id: 'holders', kind: 'balances', token: tokens.MARS, decimals: 18 },
+  ];
+
+  if (PROTOCOL_ADDRESS) {
+    streams.push({
+      id: 'protocolOut', kind: 'sum', token: tokens.SPCX,
+      from: contracts.rewardsIndex, to: PROTOCOL_ADDRESS, decimals: 18,
+    });
+  }
+  return streams;
 }
+
+export const STREAMS = buildStreams(TOKENS, CONTRACTS);
 
 /** Tokens that actually reached holders. */
 export function holderPayout(totals) {
@@ -74,11 +79,13 @@ export function holderPayout(totals) {
 
 /* Addresses that hold supply but are not holders in the sense the tile means:
    the pool itself, the fee locker, the rewards contract. */
-export const EXCLUDE_FROM_HOLDERS = [
-  CONTRACTS.pool,
-  CONTRACTS.feeLocker,
-  CONTRACTS.rewardsIndex,
-].map((a) => a.toLowerCase());
+export function excludeFromHolders(contracts) {
+  return [contracts.pool, contracts.feeLocker, contracts.rewardsIndex]
+    .filter(Boolean)
+    .map((a) => a.toLowerCase());
+}
+
+export const EXCLUDE_FROM_HOLDERS = excludeFromHolders(CONTRACTS);
 
 /* Scan pacing. A Worker run is short, so it takes bites and resumes. Raise
    MAX_CHUNKS_PER_RUN to backfill faster; lower CHUNK_SIZE if the RPC complains
@@ -88,7 +95,51 @@ export const MAX_CHUNKS_PER_RUN = 60;
 export const CONFIRMATIONS = 5;
 
 // Price the token totals in USD. Public, no key.
-export const DEXSCREENER_PAIR =
-  'https://api.dexscreener.com/latest/dex/pairs/base/' + CONTRACTS.pool;
-export const DEXSCREENER_KEX_TOKEN =
-  'https://api.dexscreener.com/latest/dex/tokens/' + TOKENS.KEX;
+export const DEX = 'https://api.dexscreener.com/latest/dex/';
+
+export const DEXSCREENER_PAIR = DEX + 'pairs/base/' + CONTRACTS.pool;
+export const DEXSCREENER_SPCX_TOKEN = DEX + 'tokens/' + TOKENS.SPCX;
+
+/* ==========================================================================
+   Per-deployment resolution
+   --------------------------------------------------------------------------
+   Everything above is the default. Any of it can be overridden by a wrangler
+   [vars] entry (or a secret) of the same name, so one build can be pointed at
+   a different token without editing this file:
+
+     TOKEN_MARS  TOKEN_SPCX  POOL  FEE_LOCKER  REWARDS_INDEX  START_BLOCK
+
+   `configured` is false while the essential four are still unset. The Worker
+   checks it before scanning, so an unconfigured deployment serves nulls and
+   says so rather than publishing a confident row of zeros.
+   ========================================================================== */
+
+export function resolveConfig(env = {}) {
+  const tokens = {
+    MARS: env.TOKEN_MARS || TOKENS.MARS,
+    SPCX: env.TOKEN_SPCX || TOKENS.SPCX,
+  };
+
+  const contracts = {
+    pool: env.POOL || CONTRACTS.pool,
+    feeLocker: env.FEE_LOCKER || CONTRACTS.feeLocker,
+    rewardsIndex: env.REWARDS_INDEX || CONTRACTS.rewardsIndex,
+  };
+
+  const startBlock = Number(env.START_BLOCK ?? START_BLOCK) || 0;
+  const streams = buildStreams(tokens, contracts);
+
+  return {
+    tokens,
+    contracts,
+    startBlock,
+    streams,
+    sumStreams: streams.filter((s) => s.kind !== 'balances'),
+    balanceStreams: streams.filter((s) => s.kind === 'balances'),
+    exclude: excludeFromHolders(contracts),
+    spcxTokenUrl: DEX + 'tokens/' + tokens.SPCX,
+    configured: Boolean(tokens.MARS && tokens.SPCX && contracts.rewardsIndex && startBlock > 0),
+  };
+}
+
+export const CONFIGURED = resolveConfig().configured;

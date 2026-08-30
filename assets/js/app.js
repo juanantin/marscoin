@@ -1,6 +1,6 @@
 /* ==========================================================================
-   STONKEX STRATEGY — app
-   Contract-address copy, live dashboard.
+   MARSCOIN — app
+   Contract-address copy, live dashboard, tile sparklines.
 
    Data flow: each source in CONFIG.sources returns the fields it knows about;
    they are merged in order, so a later source overrides an earlier one. Add
@@ -10,27 +10,46 @@
 (function () {
   'use strict';
 
-  var CFG = window.STONKEX_CONFIG || {};
+  var CFG = window.MARSCOIN_CONFIG || {};
   var LINKS = CFG.links || {};
   var SRC = CFG.sources || {};
   var DEBUG = /[?&]debug=1\b/.test(location.search);
+
+  var TICKER = CFG.ticker || 'MARSCOIN';
+  var REWARD_TICKER = CFG.rewardTicker || 'SPCX';
 
   var METRICS = ['fees', 'feesTokens', 'distributed', 'distributedUsd', 'holders',
                  'marketCap', 'liquidity', 'volume24h'];
 
   function log() {
-    if (DEBUG && window.console) console.log.apply(console, ['[stonkex]'].concat([].slice.call(arguments)));
+    if (DEBUG && window.console) console.log.apply(console, ['[marscoin]'].concat([].slice.call(arguments)));
   }
 
   /* ---------------------------------------------------------------------
-     Formatting
+     Tickers
+     The two names live in config.js, so a rename doesn't mean hunting
+     through the markup.
      --------------------------------------------------------------------- */
 
-  // Whole numbers throughout — cents on a market cap are noise.
-  var nf0 = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-ticker]'), function (node) {
+    var which = node.dataset.ticker;
+    if (which === 'reward') node.textContent = REWARD_TICKER;
+    else if (which === 'reward-$') node.textContent = '$' + REWARD_TICKER;
+    else if (which === 'main') node.textContent = TICKER;
+    else if (which === 'main-$') node.textContent = '$' + TICKER;
+  });
 
-  function usd(n) { return '$' + nf0.format(Math.round(n)); }
-  function amount(n) { return nf0.format(Math.round(n)); }
+  /* ---------------------------------------------------------------------
+     Formatting
+     Cents are kept on the money figures — these are running totals, and the
+     design shows them to the penny.
+     --------------------------------------------------------------------- */
+
+  var nf0 = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+  var nf2 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  function usd(n) { return '$' + nf2.format(n); }
+  function amount(n) { return nf2.format(n); }
   function count(n) { return nf0.format(Math.round(n)); }
 
   var FORMATTERS = {
@@ -93,20 +112,36 @@
 
   function shorten(addr) {
     if (!addr) return '—';
-    return addr.length <= 12 ? addr : addr.slice(0, 4) + '…' + addr.slice(-4);
+    return addr.length <= 12 ? addr : addr.slice(0, 6) + '…' + addr.slice(-4);
   }
 
   var caShort = document.getElementById('ca-short');
   if (caShort) caShort.textContent = shorten(address);
 
+  /* With no address and no explicit chart URL there is nowhere to send anyone,
+     so the pill goes inert rather than linking to a broken DexScreener page. */
   var chartLink = document.getElementById('link-chart');
   if (chartLink) {
-    chartLink.href = LINKS.chart ||
-      ('https://dexscreener.com/' + (CFG.chain || 'base') + '/' + encodeURIComponent(address));
+    if (LINKS.chart) {
+      chartLink.href = LINKS.chart;
+    } else if (address) {
+      chartLink.href = 'https://dexscreener.com/' + (CFG.chain || 'base') + '/' + encodeURIComponent(address);
+    } else {
+      chartLink.removeAttribute('href');
+      chartLink.classList.add('is-off');
+      chartLink.setAttribute('aria-disabled', 'true');
+      chartLink.title = 'Chart link available once the contract address is set';
+    }
   }
 
   var xLink = document.getElementById('link-x');
   if (xLink && LINKS.x) xLink.href = LINKS.x;
+
+  var launchedLink = document.getElementById('link-launched');
+  if (launchedLink && LINKS.launchedIn) launchedLink.href = LINKS.launchedIn;
+
+  var rewardsLink = document.getElementById('link-rewards');
+  if (rewardsLink && LINKS.rewardsBy) rewardsLink.href = LINKS.rewardsBy;
 
   /* Copy-to-clipboard, with a fallback for non-secure contexts. */
   var copyBtn = document.getElementById('copy-ca');
@@ -218,6 +253,7 @@
   /* Market cap, liquidity, 24h volume. */
   function sourceDexScreener() {
     var pool = (SRC.dexscreener || {}).pairAddress || (CFG.contracts || {}).pool;
+    if (!address && !pool) return Promise.resolve(null);
     return dexPair(address, pool).then(function (pair) {
       if (!pair) return null;
       var out = {};
@@ -313,7 +349,7 @@
     });
   }
 
-  /* Project rewards API — fees collected, $STONKEX distributed.
+  /* Protocol rewards API — fees collected, $SPCX distributed.
      Takes one URL or several; each is read through the same field map and the
      first to yield a number for a metric wins. */
   function sourceRewards() {
@@ -373,6 +409,114 @@
   }
 
   /* ---------------------------------------------------------------------
+     Sparklines
+     There is no historical series to fetch — the sources report totals as of
+     now. So the line is this browser's own record: every refresh appends the
+     figure it just read, and the tile stays blank until enough points exist.
+     Nothing is seeded or interpolated, and clearing site data resets it.
+     --------------------------------------------------------------------- */
+
+  var SPARK = CFG.sparklines || {};
+  var SPARK_ON = SPARK.enabled !== false;
+  var MIN_POINTS = Math.max(2, Number(SPARK.minPoints) || 4);
+  var MAX_POINTS = Math.max(MIN_POINTS, Number(SPARK.maxPoints) || 60);
+
+  // Keyed by token, so pointing the site at a different contract starts fresh.
+  var SPARK_KEY = 'marscoin:spark:' + (address.toLowerCase() || 'unset');
+
+  var sparkNodes = {};
+  Array.prototype.forEach.call(document.querySelectorAll('[data-spark]'), function (node) {
+    sparkNodes[node.dataset.spark] = node;
+  });
+
+  function readHistory() {
+    try {
+      var raw = window.localStorage.getItem(SPARK_KEY);
+      var parsed = raw ? JSON.parse(raw) : null;
+      if (parsed && parsed.series && typeof parsed.series === 'object') return parsed;
+    } catch (e) { log('sparklines', 'history unreadable — starting empty'); }
+    return { at: 0, series: {} };
+  }
+
+  function writeHistory(hist) {
+    try { window.localStorage.setItem(SPARK_KEY, JSON.stringify(hist)); }
+    catch (e) { log('sparklines', 'history not saved — storage unavailable'); }
+  }
+
+  /* Append this load's figures, but not more often than half the refresh
+     interval — otherwise a run of page reloads would pack the line with
+     points that are all the same moment. */
+  function recordHistory(stats) {
+    if (!SPARK_ON) return null;
+
+    var hist = readHistory();
+    var now = Date.now();
+    var minGap = (Number(CFG.refreshSeconds) || 60) * 500;   // half the interval, in ms
+
+    if (hist.at && now - hist.at < minGap) return hist;
+
+    Object.keys(sparkNodes).forEach(function (key) {
+      var v = stats[key];
+      if (typeof v !== 'number' || !isFinite(v)) return;
+      var series = hist.series[key] = hist.series[key] || [];
+      series.push(Math.round(v * 1e4) / 1e4);
+      if (series.length > MAX_POINTS) series.splice(0, series.length - MAX_POINTS);
+    });
+
+    hist.at = now;
+    writeHistory(hist);
+    return hist;
+  }
+
+  function sparkPaths(values, w, h) {
+    var pad = 3;
+    var lo = Math.min.apply(null, values);
+    var hi = Math.max.apply(null, values);
+    var span = hi - lo;
+    var stepX = values.length > 1 ? w / (values.length - 1) : 0;
+
+    var pts = values.map(function (v, i) {
+      // A flat series has no shape to show — draw it down the middle.
+      var t = span > 0 ? (v - lo) / span : 0.5;
+      var y = h - pad - t * (h - pad * 2);
+      return [i * stepX, y];
+    });
+
+    var line = pts.map(function (p, i) {
+      return (i ? 'L' : 'M') + p[0].toFixed(2) + ' ' + p[1].toFixed(2);
+    }).join(' ');
+
+    return { line: line, area: line + ' L' + w + ' ' + h + ' L0 ' + h + ' Z' };
+  }
+
+  function drawSparklines(hist) {
+    if (!SPARK_ON || !hist) return;
+
+    Object.keys(sparkNodes).forEach(function (key) {
+      var svg = sparkNodes[key];
+      var values = (hist.series && hist.series[key]) || [];
+
+      var tile = svg.closest ? svg.closest('.stat') : null;
+
+      if (values.length < MIN_POINTS) {
+        svg.hidden = true;
+        if (tile) tile.classList.remove('has-spark');
+        return;
+      }
+
+      var box = (svg.getAttribute('viewBox') || '0 0 100 30').split(/\s+/);
+      var d = sparkPaths(values, Number(box[2]) || 100, Number(box[3]) || 30);
+
+      var line = svg.querySelector('.stat__spark-line');
+      var area = svg.querySelector('.stat__spark-area');
+      if (line) line.setAttribute('d', d.line);
+      if (area) area.setAttribute('d', d.area);
+      svg.hidden = false;
+      if (tile) tile.classList.add('has-spark');
+    });
+  }
+
+  /* ---------------------------------------------------------------------
      Values (with a count-up on change)
      --------------------------------------------------------------------- */
 
@@ -427,6 +571,7 @@
     chips.forEach(function (chip) {
       chip.hidden = typeof stats[chip.dataset.chipFor] !== 'number';
     });
+    drawSparklines(recordHistory(stats));
   }
 
   /* ---------------------------------------------------------------------
@@ -439,6 +584,7 @@
     var s = CFG.stats || {};
     return {
       fees: num(s.totalFeesCollected),
+      feesTokens: num(s.totalFeesTokens),
       distributed: num(s.totalDistributed),
       distributedUsd: num(s.totalDistributedUsd),
       holders: num(s.holders),
@@ -458,18 +604,20 @@
     if (!box) {
       box = document.createElement('pre');
       box.id = 'dash-debug';
-      box.style.cssText = 'margin:14px auto 0;max-width:640px;padding:12px 14px;border:1px solid #e6ebf3;' +
-        'border-radius:12px;background:#fbfcfe;color:#3d4655;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;' +
+      box.style.cssText = 'margin:14px auto 0;max-width:640px;padding:12px 14px;' +
+        'border:1px solid rgba(255,255,255,.09);border-radius:12px;background:#0e1017;color:#c3c9d6;' +
+        'font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;' +
         'text-align:left;white-space:pre-wrap;word-break:break-word;';
       note.parentNode.insertBefore(box, note.nextSibling);
     }
     var head = 'build ' + (CFG.version || 'unknown') +
-      '  ·  ' + new Date().toLocaleTimeString() + '\n\n';
+      '  ·  ' + new Date().toLocaleTimeString() +
+      (address ? '' : '  ·  NO CONTRACT ADDRESS SET') + '\n\n';
 
-    box.textContent = head + sourceLog.map(function (s) {
+    box.textContent = head + (sourceLog.map(function (s) {
       return (s.ok ? (s.empty ? '· empty  ' : '✓ ok     ') : '✗ failed ') +
         s.name + (s.ok ? '' : '  — ' + s.error);
-    }).join('\n') || 'no sources ran';
+    }).join('\n') || 'no sources ran');
   }
 
   function load() {
@@ -495,7 +643,7 @@
         if (got) live++;
       });
 
-      // Derive the USD value of distributed $STONKEX if nothing supplied one.
+      // Derive the USD value of distributed $SPCX if nothing supplied one.
       if (stats.distributedUsd === null && rewardPrice !== null && typeof stats.distributed === 'number') {
         stats.distributedUsd = stats.distributed * rewardPrice;
       }
@@ -506,7 +654,8 @@
       // Only worth saying something when the data ISN'T live — a timestamp on
       // a working dashboard is noise.
       if (note) {
-        note.textContent = live ? '' : 'Live data unavailable — retrying.';
+        note.textContent = live ? '' :
+          (address ? 'Live data unavailable — retrying.' : 'Contract address not set — see config.js');
         note.hidden = !!live;
       }
       renderDebug();

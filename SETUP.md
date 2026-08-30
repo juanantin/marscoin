@@ -1,6 +1,6 @@
 # Setting this up for a new token
 
-A copy of the STONKEX Strategy site with the indexed figures cleared. Everything
+A copy of the MARSCOIN site with the indexed figures cleared. Everything
 below is what is still token-specific; the rest of the code reads from it.
 
 ## 1. Addresses
@@ -23,9 +23,11 @@ below is what is still token-specific; the rest of the code reads from it.
 
 ## 2. Branding
 
-- `images/` — header video + its poster frame, and `stkstr_icon.png`.
-  Regenerate `favicon.ico`, `images/favicon.png` and `images/apple-touch-icon.png`
-  from the icon (apple-touch-icon must be flattened onto white).
+- `images/` — header video + its poster frame, `marscoin_logo.png` (the icon
+  source), the two partner photographs, and `marscoin_og.jpg` (the share image).
+  Regenerate `favicon.ico`, `images/favicon.png`, `images/apple-touch-icon.png`
+  and the two manifest icons from the logo (apple-touch-icon must be flattened
+  onto white).
 - `index.html` — `<title>`, the description and OG/Twitter meta, the dashboard
   headline and sub-line, and the tile labels naming the reward token.
 - `assets/css/styles.css` — only if the palette changes.

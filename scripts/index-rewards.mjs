@@ -7,6 +7,12 @@
    So this needs no Cloudflare account, no KV, no secrets: just Actions.
 
    Run locally:  RPC_URL=https://mainnet.base.org node scripts/index-rewards.mjs
+
+   The token is read from worker/src/config.js, and any of TOKEN_MARS,
+   TOKEN_SPCX, POOL, FEE_LOCKER, REWARDS_INDEX and START_BLOCK in the
+   environment override it. Until a token is set the script exits without
+   touching data/rewards.json — an empty scan would write zeros, and a zero on
+   the site reads as a real total.
    ========================================================================== */
 
 import fs from 'node:fs';
@@ -15,8 +21,7 @@ import { fileURLToPath } from 'node:url';
 
 import { indexRange, makeRpc, toNumber, countHolders } from '../worker/src/indexer.js';
 import {
-  STREAMS, START_BLOCK, CHUNK_SIZE, CONFIRMATIONS, EXCLUDE_FROM_HOLDERS, TOKENS,
-  holderPayout, DEXSCREENER_KEX_TOKEN, CONTRACTS,
+  CHUNK_SIZE, CONFIRMATIONS, holderPayout, resolveConfig,
 } from '../worker/src/config.js';
 import { tokenPriceUsd } from '../worker/src/price.js';
 
@@ -49,8 +54,25 @@ function retrying(rpc, tries = 5) {
   };
 }
 
-const SUM_STREAMS = STREAMS.filter((s) => s.kind !== 'balances');
-const BALANCE_STREAMS = STREAMS.filter((s) => s.kind === 'balances');
+const CFG = resolveConfig(process.env);
+
+if (!CFG.configured) {
+  process.stderr.write(
+    'No token configured — set TOKENS.MARS, TOKENS.SPCX, CONTRACTS.rewardsIndex\n' +
+    'and START_BLOCK in worker/src/config.js (or pass them in the environment).\n' +
+    'Refusing to run: an empty scan would write zeros to data/rewards.json.\n');
+  // 78 = EX_CONFIG. The scheduled workflow treats it as "nothing to do yet"
+  // rather than a failed run, so an unconfigured repo does not email a red X
+  // every 15 minutes.
+  process.exit(78);
+}
+
+const { streams: STREAMS, startBlock: START_BLOCK, contracts: CONTRACTS, tokens: TOKENS } = CFG;
+const EXCLUDE_FROM_HOLDERS = CFG.exclude;
+const DEXSCREENER_SPCX_TOKEN = CFG.spcxTokenUrl;
+
+const SUM_STREAMS = CFG.sumStreams;
+const BALANCE_STREAMS = CFG.balanceStreams;
 
 const readJson = (f, fallback) => {
   try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return fallback; }
@@ -134,7 +156,7 @@ async function main() {
   }
 
   const complete = cursor > head;
-  const [kex, market] = await Promise.all([tokenPriceUsd(DEXSCREENER_KEX_TOKEN, TOKENS.KEX), pairStats()]);
+  const [kex, market] = await Promise.all([tokenPriceUsd(DEXSCREENER_SPCX_TOKEN, TOKENS.SPCX), pairStats()]);
 
   // feesIn is what reached the rewards contract; holderPayout strips the
   // protocol's cut off the outflow so "distributed" means paid to holders.
@@ -159,7 +181,7 @@ async function main() {
     totalDistributed: complete ? distributed : null,
     totalDistributedUsd: complete && kex != null ? distributed * kex : null,
     totalFeesCollected: complete && kex != null ? feesIn * kex : null,
-    // The same fees in $STONKEX, so the tile can show the token amount next to
+    // The same fees in $SPCX, so the tile can show the token amount next to
     // the dollar figure without depending on the price lookup succeeding.
     totalFeesTokens: complete ? feesIn : null,
     holders: complete ? holders : null,
@@ -169,12 +191,12 @@ async function main() {
     updatedAt: new Date().toISOString(),
     meta: {
       synced: complete, blocksBehind: Math.max(0, head - cursor + 1),
-      kexPriceUsd: kex,
+      spcxPriceUsd: kex,
     },
   }, null, 2) + '\n');
 
   console.log(complete
-    ? `synced · fees ${feesIn.toFixed(2)} KEX · to holders ${distributed.toFixed(2)} KEX · holders ${holders}`
+    ? `synced · fees ${feesIn.toFixed(2)} SPCX · to holders ${distributed.toFixed(2)} SPCX · holders ${holders}`
     : `partial · ${head - cursor + 1} blocks behind · continues next run`);
 
   // Advancing the cursor at all is progress worth committing, so only fail the

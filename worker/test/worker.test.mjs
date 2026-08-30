@@ -9,6 +9,23 @@ import test from 'node:test';
 const word = (n) => '0x' + BigInt(n).toString(16).padStart(64, '0');
 const E18 = 10n ** 18n;
 
+/* src/config.js ships unset — a token has to be chosen before the indexer means
+   anything — so the suite supplies one through env, exactly as a wrangler
+   [vars] block does in a real deployment. */
+const SPCX = '0x5ab000ff9B9FfE0349CE5ffA5fD86f217C3680F5';
+const MARS = '0x80081d759E5e0154fB15D5ee8De5085D89E3dCcC';
+const REWARDS_INDEX = '0xf01a4dabfd54d1A6a1812a95F7151e8DA851DE2E';
+const START = 50530608;
+
+const VARS = {
+  TOKEN_MARS: MARS,
+  TOKEN_SPCX: SPCX,
+  POOL: '0x550b95fcb0e309c552FAe9670b1A514D443CA463',
+  FEE_LOCKER: '0x71D1D363176723f85d98B8B430DF33cde89f0A7f',
+  REWARDS_INDEX,
+  START_BLOCK: START,
+};
+
 function fakeKV() {
   const store = new Map();
   return {
@@ -27,7 +44,7 @@ function makeEnv(head, transfers) {
     if (String(url).includes('dexscreener')) {
       return { ok: true, json: async () => ({ pairs: [{
         chainId: 'base',
-        baseToken: { address: '0x5ab000ff9B9FfE0349CE5ffA5fD86f217C3680F5' },
+        baseToken: { address: SPCX },
         liquidity: { usd: 3400000 }, priceUsd: '0.25',
       }]}) };
     }
@@ -45,10 +62,8 @@ function makeEnv(head, transfers) {
       .map(([, amt]) => ({ data: word(amt) }));
     return { ok: true, json: async () => ({ result: logs }) };
   };
-  return { env: { STONKEX: KV, RPC_URL: 'http://rpc.test', ADMIN_TOKEN: 'secret' }, KV, rpcCalls };
+  return { env: { MARSCOIN: KV, RPC_URL: 'http://rpc.test', ADMIN_TOKEN: 'secret', ...VARS }, KV, rpcCalls };
 }
-
-const START = 50530608;
 
 /* The real runtime keeps a Worker alive until every waitUntil promise settles,
    so the fake has to as well — otherwise scheduled() returns before the sync
@@ -79,10 +94,10 @@ test('cron sync banks totals, then a later run resumes without re-counting', asy
 
   let res = await mod.fetch(new Request('https://w/'), a.env, ctx);
   let body = await res.json();
-  // 8 KEX left the contract; only the holders' share counts as distributed.
+  // 8 SPCX left the contract; only the holders' share counts as distributed.
   assert.equal(body.totalDistributed, 8 * HOLDER_SHARE);
   assert.equal(body.totalDistributedUsd, 8 * HOLDER_SHARE * 0.25);
-  assert.equal(body.totalFeesCollected, 3);            // 12 KEX in × $0.25
+  assert.equal(body.totalFeesCollected, 3);            // 12 SPCX in × $0.25
   assert.equal(body.meta.synced, true);
 
   // Head advances; a new payout lands. Reuse the same KV.
@@ -90,7 +105,7 @@ test('cron sync banks totals, then a later run resumes without re-counting', asy
     paidOut: [[START + 10, 5n * E18], [START + 500, 3n * E18], [START + 1500, 4n * E18]],
     feesIn: [[START + 20, 12n * E18]],
   });
-  b.env.STONKEX = a.KV;                                 // carry state over
+  b.env.MARSCOIN = a.KV;                                 // carry state over
   await runCron(mod, b.env);
 
   res = await mod.fetch(new Request('https://w/'), b.env, ctx);
@@ -108,11 +123,33 @@ test('cron sync banks totals, then a later run resumes without re-counting', asy
 });
 
 test('fees track the rewards contract, not the platform-wide fee locker', async () => {
-  const { STREAMS, CONTRACTS } = await import('../src/config.js');
-  const fees = STREAMS.find((s) => s.id === 'feesIn');
-  assert.equal(fees.to.toLowerCase(), CONTRACTS.rewardsIndex.toLowerCase(),
+  const { resolveConfig } = await import('../src/config.js');
+  const cfg = resolveConfig(VARS);
+  const fees = cfg.streams.find((s) => s.id === 'feesIn');
+  assert.equal(fees.to.toLowerCase(), cfg.contracts.rewardsIndex.toLowerCase(),
     'the fee locker is shared by every coin on the platform');
+  assert.notEqual(fees.to.toLowerCase(), cfg.contracts.feeLocker.toLowerCase());
   assert.equal(fees.from, undefined);
+});
+
+test('an unconfigured build refuses to scan, and serves nulls rather than zeros', async () => {
+  const { resolveConfig } = await import('../src/config.js');
+  assert.equal(resolveConfig().configured, false, 'src/config.js ships unset');
+
+  const mod = (await import('../src/index.js')).default;
+  const { KV } = makeEnv(START, {});
+  const bare = { MARSCOIN: KV, RPC_URL: 'http://rpc.test' };
+
+  const res = await mod.fetch(new Request('https://w.test/'), bare, makeCtx());
+  const body = await res.json();
+  assert.equal(body.meta.configured, false);
+  assert.equal(body.totalDistributed, null, 'a zero would read as a real total');
+  assert.equal(body.totalFeesCollected, null);
+  assert.equal(body.holders, null);
+
+  // …and the cron must not bank a scan of empty filters.
+  await runCron(mod, bare);
+  assert.equal(KV.store.size, 0, 'nothing written to KV');
 });
 
 test('holder payout strips the protocol cut, matching Stockify', async () => {
@@ -167,12 +204,12 @@ test('a failing RPC is recorded, not thrown, and totals are kept', async () => {
 
 test('counts holders from transfers, across a resumed backfill', async () => {
   const mod = (await import('../src/index.js')).default;
-  const { CONTRACTS } = await import('../src/config.js');
+  const { resolveConfig } = await import('../src/config.js');
 
   const ZERO = '0x0000000000000000000000000000000000000000';
   const A = '0x1111111111111111111111111111111111111111';
   const B = '0x2222222222222222222222222222222222222222';
-  const POOL = CONTRACTS.pool.toLowerCase();
+  const POOL = resolveConfig(VARS).contracts.pool.toLowerCase();
   const T = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
   const topic = (a) => '0x' + '0'.repeat(24) + a.slice(2);
   const xfer = (f, t, amt) => ({ topics: [T, topic(f), topic(t)], data: word(amt) });
@@ -198,10 +235,10 @@ test('counts holders from transfers, across a resumed backfill', async () => {
       const logs = Object.entries(wnd.logs).filter(([b]) => +b >= from && +b <= to).map(([, l]) => l);
       return { ok: true, json: async () => ({ result: logs }) };
     };
-    await runCron(mod, { STONKEX: KV, RPC_URL: 'http://rpc.test', ADMIN_TOKEN: 'secret' });
+    await runCron(mod, { MARSCOIN: KV, RPC_URL: 'http://rpc.test', ADMIN_TOKEN: 'secret', ...VARS });
   }
 
-  const env = { STONKEX: KV, RPC_URL: 'http://rpc.test', ADMIN_TOKEN: 'secret' };
+  const env = { MARSCOIN: KV, RPC_URL: 'http://rpc.test', ADMIN_TOKEN: 'secret', ...VARS };
   const dbg = await (await mod.fetch(new Request('https://w/debug'), env, ctx)).json();
 
   // A has 6, B has 4, and the pool's 90 is excluded — so two holders.
