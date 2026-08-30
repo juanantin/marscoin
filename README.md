@@ -242,7 +242,8 @@ the page falls back to `execCommand` elsewhere.)
   so nothing is lost to a screen reader. The CA pill keeps its text, since the
   address is the content.
 - Both ecosystem cards pair a photograph (`images/launch.png`, `images/dome.png`)
-  with the partner's own lockup on a plate, and **deliberately link nowhere**.
+  with the partner's own lockup on a plate; the plate is the link, and its URL
+  comes from `links.launchedIn` / `links.rewardsBy` in `config.js`.
   The photo is a fixed-width panel rather than a full-bleed background: the
   source images are square, and covering the whole card cropped them to a strip.
   It is masked on its right edge so it dissolves into the card.

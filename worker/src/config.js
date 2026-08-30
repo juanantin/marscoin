@@ -1,7 +1,8 @@
 /* ==========================================================================
    What the indexer watches.
    --------------------------------------------------------------------------
-   ⚠ NOT YET CONFIGURED. Every address below is empty and START_BLOCK is 0, so
+   ⚠ NOT YET FULLY CONFIGURED. $MARSCOIN is set; TOKENS.SPCX,
+   CONTRACTS.rewardsIndex and START_BLOCK are still empty, so
    the Worker reports `configured: false` and serves nulls rather than zeros —
    see CONFIGURED at the foot of this file. Fill in the four addresses and the
    launch block, then check /debug after the first sync and confirm which flow
@@ -13,7 +14,7 @@ export const CHAIN_ID = 8453;                    // Base
 
 export const TOKENS = {
   // $MARSCOIN — the token people buy
-  MARS: '',
+  MARS: '0x61199398e8c51d6Cde7d5D2Ff579A3065340826b',
   // $SPCX — the reward token, 18 decimals
   SPCX: '',
 };
