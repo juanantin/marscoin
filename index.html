@@ -16,16 +16,16 @@
 
 <!-- favicon.ico sits at the root because browsers request /favicon.ico on their
      own, regardless of these tags. All generated from images/marscoin_logo.png. -->
-<link rel="icon" href="favicon.ico?v=2026-08-30.2" sizes="any">
-<link rel="icon" type="image/png" sizes="64x64" href="images/favicon.png?v=2026-08-30.2">
-<link rel="apple-touch-icon" href="images/apple-touch-icon.png?v=2026-08-30.2">
-<link rel="manifest" href="site.webmanifest?v=2026-08-30.2">
+<link rel="icon" href="favicon.ico?v=2026-08-30.3" sizes="any">
+<link rel="icon" type="image/png" sizes="64x64" href="images/favicon.png?v=2026-08-30.3">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png?v=2026-08-30.3">
+<link rel="manifest" href="site.webmanifest?v=2026-08-30.3">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="assets/css/styles.css?v=2026-08-30.2">
+<link rel="stylesheet" href="assets/css/styles.css?v=2026-08-30.3">
 </head>
 <body>
 
@@ -300,9 +300,10 @@
 
 </main>
 
-<!-- ?v= is the cache buster: bump BUILD in both files on every deploy,
-     or a CDN will keep serving the previous config.js and app.js. -->
-<script src="config.js?v=2026-08-30.2"></script>
-<script src="assets/js/app.js?v=2026-08-30.2"></script>
+<!-- ?v= is the cache buster. Bump every one of them on every deploy, or a
+     CDN and every returning browser will keep serving the previous CSS and JS:
+       node scripts/stamp.mjs -->
+<script src="config.js?v=2026-08-30.3"></script>
+<script src="assets/js/app.js?v=2026-08-30.3"></script>
 </body>
 </html>
