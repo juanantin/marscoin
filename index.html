@@ -15,17 +15,17 @@
 <meta name="theme-color" content="#f7f9fc">
 
 <!-- favicon.ico sits at the root because browsers request /favicon.ico on their
-     own, regardless of these tags. All generated from images/stkstr_icon.png. -->
-<link rel="icon" href="favicon.ico?v=2026-08-29.14" sizes="any">
-<link rel="icon" type="image/png" sizes="64x64" href="images/favicon.png?v=2026-08-29.14">
-<link rel="apple-touch-icon" href="images/apple-touch-icon.png?v=2026-08-29.14">
-<link rel="manifest" href="site.webmanifest?v=2026-08-29.14">
+     own, regardless of these tags. All generated from images/marscoin_logo.png. -->
+<link rel="icon" href="favicon.ico?v=2026-08-30.1" sizes="any">
+<link rel="icon" type="image/png" sizes="64x64" href="images/favicon.png?v=2026-08-30.1">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png?v=2026-08-30.1">
+<link rel="manifest" href="site.webmanifest?v=2026-08-30.1">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="assets/css/styles.css?v=2026-08-29.14">
+<link rel="stylesheet" href="assets/css/styles.css?v=2026-08-30.1">
 </head>
 <body>
 
@@ -82,17 +82,24 @@
          and the poster stands in as a still header. -->
     <video
       class="hero__media" id="hero-video"
-      poster="images/stonkex_header_poster.webp"
+      poster="images/marscoin_header_poster.webp"
       width="768" height="384"
       autoplay muted loop playsinline preload="none"
       aria-label="STONKEX Strategy — Stonk Exchange Strategy. Buy $STONKEXSTR, get $STONKEX. 1B total supply, on Base chain."
-      data-src="images/stonkex_header.mp4"></video>
+      data-src="images/marscoin_header.mp4"></video>
 
     <script>
       (function () {
         var v = document.getElementById('hero-video');
         var still = !window.matchMedia || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (still) return;
+        // Half speed. defaultPlaybackRate is what survives load() — the media
+        // load algorithm resets playbackRate to it — and the listener covers
+        // the loop restarts.
+        var HALF = 0.5;
+        v.defaultPlaybackRate = HALF;
+        v.playbackRate = HALF;
+        v.addEventListener('loadedmetadata', function () { v.playbackRate = HALF; });
         v.src = v.dataset.src;
         v.preload = 'auto';
         v.load();
@@ -218,7 +225,7 @@
 
 <!-- ?v= is the cache buster: bump BUILD in both files on every deploy,
      or a CDN will keep serving the previous config.js and app.js. -->
-<script src="config.js?v=2026-08-29.14"></script>
-<script src="assets/js/app.js?v=2026-08-29.14"></script>
+<script src="config.js?v=2026-08-30.1"></script>
+<script src="assets/js/app.js?v=2026-08-30.1"></script>
 </body>
 </html>
