@@ -15,8 +15,8 @@ images/               branding
 
 ## What's on the page
 
-- **Link bar** — X, chart, and a contract-address button that copies the CA to the
-  clipboard and flashes a `COPIED!` confirmation.
+- **Link bar** — X and chart as icon-only pills, plus a contract-address button
+  that copies the CA to the clipboard and flashes a `COPIED!` confirmation.
 - **Hero** — the animated MARSCOIN banner, looping silently. The poster is
   the clip's own first frame, so poster → playback is seamless. Viewers with
   `prefers-reduced-motion: reduce` get the poster as a still and the video never
@@ -238,9 +238,19 @@ the page falls back to `execCommand` elsewhere.)
 
 - Dark theme only, by design — the brand artwork is built for a black ground.
   Type is JetBrains Mono throughout the chrome, Inter for the fine print.
-- Both ecosystem cards are photographs (`images/launch.png`, `images/dome.png`)
-  bled to the card edge and faded into the surface behind the copy, so the two
-  partner names are set as text rather than as supplied lockups.
+- The link bar's X and chart pills are icon-only — each carries an `aria-label`,
+  so nothing is lost to a screen reader. The CA pill keeps its text, since the
+  address is the content.
+- Both ecosystem cards pair a photograph (`images/launch.png`, `images/dome.png`)
+  with the partner's own lockup on a plate, and **deliberately link nowhere**.
+  The photo is a fixed-width panel rather than a full-bleed background: the
+  source images are square, and covering the whole card cropped them to a strip.
+  It is masked on its right edge so it dissolves into the card.
+- `images/stonkex_button_dark.png` is the supplied `stonkex_button.png` with its
+  "STONKS" wordmark lifted from `#2b3347` to near-white. That ink was darkened
+  for the old white page and sat at 1.4:1 on this one — effectively invisible.
+  The icon tile and the blue `.EXCHANGE` are untouched, and the original file is
+  kept as-is.
 - `favicon.ico`, `images/favicon.png`, `images/apple-touch-icon.png` and the two
   manifest icons are all generated from `images/marscoin_logo.png`, cropped to
   the artwork's own bounds. Regenerate them together if the mark changes
