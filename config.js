@@ -61,6 +61,9 @@ window.MARSCOIN_CONFIG = {
     // linking somewhere broken.
     chart: null,
 
+    // Recorded for reference only — the two ecosystem cards show the partners'
+    // lockups and deliberately do not link anywhere. Wrap either card's markup
+    // in an <a> in index.html if that should change.
     launchedIn: 'https://www.thestonks.exchange/',
     rewardsBy: 'https://www.stockify.finance/',
   },

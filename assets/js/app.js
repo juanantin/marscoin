@@ -137,12 +137,6 @@
   var xLink = document.getElementById('link-x');
   if (xLink && LINKS.x) xLink.href = LINKS.x;
 
-  var launchedLink = document.getElementById('link-launched');
-  if (launchedLink && LINKS.launchedIn) launchedLink.href = LINKS.launchedIn;
-
-  var rewardsLink = document.getElementById('link-rewards');
-  if (rewardsLink && LINKS.rewardsBy) rewardsLink.href = LINKS.rewardsBy;
-
   /* Copy-to-clipboard, with a fallback for non-secure contexts. */
   var copyBtn = document.getElementById('copy-ca');
   var toast = document.getElementById('copy-toast');

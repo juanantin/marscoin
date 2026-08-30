@@ -41,21 +41,21 @@
 <header class="topbar">
   <nav class="topbar__inner" aria-label="Primary">
 
-    <a class="pill" id="link-x" href="https://x.com/marscoin_base" target="_blank" rel="noopener noreferrer">
+    <a class="pill pill--icon" id="link-x" href="https://x.com/marscoin_base"
+       target="_blank" rel="noopener noreferrer" aria-label="MARSCOIN on X">
       <svg class="pill__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path fill="currentColor" d="M17.53 3h3.2l-6.99 7.99L22 21h-6.44l-4.72-6.17L5.4 21H2.2l7.48-8.55L2 3h6.6l4.27 5.64L17.53 3Zm-1.12 16.07h1.77L7.68 4.83H5.78l10.63 14.24Z"/>
       </svg>
-      <span>X</span>
     </a>
 
-    <a class="pill" id="link-chart" href="#" target="_blank" rel="noopener noreferrer">
+    <a class="pill pill--icon" id="link-chart" href="#"
+       target="_blank" rel="noopener noreferrer" aria-label="Price chart">
       <svg class="pill__icon pill__icon--accent" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path fill="currentColor" d="M4 20h16v1.6H2.4V2.4H4V20Z"/>
         <rect x="6.4" y="12" width="2.8" height="6" rx="1" fill="currentColor"/>
         <rect x="11.2" y="8" width="2.8" height="10" rx="1" fill="currentColor"/>
         <rect x="16" y="4.4" width="2.8" height="13.6" rx="1" fill="currentColor"/>
       </svg>
-      <span>CHART</span>
     </a>
 
     <div class="ca-wrap">
@@ -257,29 +257,29 @@
   <!-- ===================== PARTNERS ===================== -->
   <section class="partners" aria-label="Ecosystem">
 
-    <a class="partner card" id="link-launched" href="https://www.thestonks.exchange/" target="_blank" rel="noopener noreferrer">
+    <div class="partner card">
       <img class="partner__art" src="images/launch.png" alt="" width="728" height="728" loading="lazy" decoding="async">
-      <span class="partner__copy">
+      <div class="partner__copy">
         <span class="partner__kicker">Launched in</span>
-        <span class="partner__brand">The Stonks Exchange</span>
-        <span class="partner__link">
-          thestonks.exchange
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-8.4 8.4M18 14.4V19a1.6 1.6 0 0 1-1.6 1.6H5A1.6 1.6 0 0 1 3.4 19V7.6A1.6 1.6 0 0 1 5 6h4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="partner__brand">
+          <!-- The supplied lockup with its wordmark lifted off the dark ground;
+               images/stonkex_button.png is the original, set for a white page. -->
+          <img src="images/stonkex_button_dark.png" alt="Stonks.Exchange"
+               width="501" height="61" loading="lazy" decoding="async">
         </span>
-      </span>
-    </a>
+      </div>
+    </div>
 
-    <a class="partner card" id="link-rewards" href="https://www.stockify.finance/" target="_blank" rel="noopener noreferrer">
+    <div class="partner card">
       <img class="partner__art" src="images/dome.png" alt="" width="728" height="728" loading="lazy" decoding="async">
-      <span class="partner__copy">
+      <div class="partner__copy">
         <span class="partner__kicker">Holders rewards powered by</span>
-        <span class="partner__brand">Stockify</span>
-        <span class="partner__link">
-          stockify.finance
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-8.4 8.4M18 14.4V19a1.6 1.6 0 0 1-1.6 1.6H5A1.6 1.6 0 0 1 3.4 19V7.6A1.6 1.6 0 0 1 5 6h4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="partner__brand partner__brand--tall">
+          <img src="images/stockyfi_logo copy.png" alt="Stockify"
+               width="1250" height="408" loading="lazy" decoding="async">
         </span>
-      </span>
-    </a>
+      </div>
+    </div>
 
   </section>
 
