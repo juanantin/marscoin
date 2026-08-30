@@ -132,7 +132,6 @@ a { color: inherit; text-decoration: none; }
 .pill__icon { width: 16px; height: 16px; flex: none; color: currentColor; }
 .pill__icon--accent { color: var(--orange); }
 
-/* No contract address configured yet — the pill has nowhere to point */
 /* X and CHART are icon-only — the glyphs say it, the words repeated it.
    Both carry an aria-label, so nothing is lost to a screen reader. */
 .pill--icon {
@@ -143,6 +142,7 @@ a { color: inherit; text-decoration: none; }
 
 .pill--icon .pill__icon { width: 18px; height: 18px; }
 
+/* No contract address configured yet — the pill has nowhere to point */
 .pill.is-off {
   opacity: .45;
   cursor: not-allowed;
@@ -230,6 +230,9 @@ a { color: inherit; text-decoration: none; }
   background: #000;
   overflow: hidden;
   box-shadow: var(--shadow-md);
+  /* The overlay copy is sized in cqw against this box, not against the
+     viewport — see .hero__overlay. */
+  container-type: inline-size;
 }
 
 .hero__media {
@@ -241,24 +244,30 @@ a { color: inherit; text-decoration: none; }
   background: #000;
 }
 
+/* Everything in this block is sized in em off a single font-size, and that
+   font-size is a share of the hero's own width. So the copy keeps a constant
+   share of the 2:1 frame at every width — which is what keeps it clear of the
+   SPACEX wordmark whatever the window is doing. Sizing it against the viewport
+   was the bug: the copy stayed put while the frame shrank around it. */
 .hero__overlay {
   position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(13px, 1.5vw, 17px);
-  padding: 22px 18px 26px;
+  font-size: clamp(10px, 2.7cqw, 13px);   /* stacked-under-the-clip sizing */
+  gap: 1.5em;
+  padding: 1.9em 1.2em 2em;
   text-align: center;
 }
 
 .hero__title {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: .26em;
   margin: 0;
   font-family: var(--font-mono);
-  font-size: clamp(17px, 3.6vw, 33px);
+  font-size: 1.62em;       /* 2.7em once the copy moves onto the clip */
   font-weight: 400;
   line-height: 1.18;
   letter-spacing: .16em;
@@ -268,18 +277,18 @@ a { color: inherit; text-decoration: none; }
   text-shadow: 0 2px 20px rgba(0, 0, 0, .85);
 }
 
-/* From this width up there is room to sit the copy on the planet, as the
-   design intends. The threshold is set by the copy, not the layout: the stack
-   is a near-constant height while the hero scales with the viewport, so below
-   about 1000px it no longer clears the SPACEX wordmark and would sit on top of
-   it. There the copy drops underneath the clip instead. */
-@media (min-width: 1000px) {
-  /* The hero breaks out past the page's 1000px measure, up to 90px each side.
+/* The copy sits on the planet from here up. Because it is sized in cqw it
+   holds the same share of the frame at every width, so this threshold is only
+   about the floor of the clamp below: under roughly 800px the copy would have
+   to shrink past legibility to keep clearing the wordmark, so it drops beneath
+   the clip instead. */
+@media (min-width: 800px) {
+  /* The hero breaks out past the page's 1000px measure, up to 140px each side.
      The clamp only spends the room the viewport actually has — it resolves to
      0 before the wrap, so the hero can never push the page into a sideways
      scroll. Wider means taller too: the ratio is fixed at 2:1. */
   .hero {
-    margin-inline: calc(-1 * clamp(0px, (100vw - 1000px) / 2 - 20px, 90px));
+    margin-inline: calc(-1 * clamp(0px, (100vw - 1000px) / 2 - 20px, 140px));
   }
 
   .hero__overlay {
@@ -287,10 +296,13 @@ a { color: inherit; text-decoration: none; }
     left: 0;
     right: 0;
     bottom: 0;
-    /* Sits the copy over the lower part of the clip rather than on its bottom
-       edge, which is where a bottom-anchored block would otherwise land. */
-    padding-bottom: clamp(26px, 4vw, 72px);
+    /* A share of the hero's width, like everything else here, so the block
+       lands on the same part of the planet at every size. */
+    font-size: clamp(9px, 1.16cqw, 15px);
+    padding-bottom: 3.7em;
   }
+
+  .hero__title { font-size: 2.7em; }
 
   /* Scrim, so the copy holds contrast over whatever frame is playing */
   .hero::after {
@@ -314,37 +326,37 @@ a { color: inherit; text-decoration: none; }
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: .85em;
   margin: 0;
-  padding: 9px 17px;
+  padding: .8em 1.45em;
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   background: rgba(9, 11, 16, .72);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   font-family: var(--font-mono);
-  font-size: clamp(10.5px, 1.2vw, 12.5px);
+  font-size: 1em;
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--ink-2);
   white-space: nowrap;
 }
 
-.chip__icon { width: 16px; height: 16px; flex: none; }
+.chip__icon { width: 1.34em; height: 1.34em; flex: none; }
 
 .chip__fact {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: .78em;
 }
 
 .chip__fact b { color: var(--orange-ink); font-weight: 700; }
 
-.chip--facts { gap: 14px; }
+.chip--facts { gap: 1.2em; }
 
 .chip__sep {
   width: 1px;
-  height: 15px;
+  height: 1.25em;
   background: var(--line);
   flex: none;
 }
@@ -711,11 +723,13 @@ a { color: inherit; text-decoration: none; }
 
   .hero { border-radius: 0; border-left: 0; border-right: 0; }
 
-  .hero__overlay { padding: 18px 14px 22px; gap: 14px; }
   .hero__title { letter-spacing: .12em; text-indent: .12em; }
 
-  .chip { padding: 8px 13px; gap: 8px; }
-  .chip--facts { gap: 10px; }
+  /* The two-fact chip is the widest thing on the page at this size — tighten
+     it so it fits a 360px screen rather than being clipped by the hero. */
+  .chip { padding: .7em 1.05em; gap: .7em; }
+  .chip--facts { gap: .8em; }
+  .chip__fact { gap: .6em; }
 
   .dashboard { padding: 16px 11px 16px; }
   .dashboard__title { font-size: 11.5px; letter-spacing: .14em; }
