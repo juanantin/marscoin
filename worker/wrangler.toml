@@ -1,0 +1,23 @@
+name = "stonkex-rewards"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+
+# Indexes forward every minute. Backfill takes several runs; watch /debug until
+# blocksBehind hits 0.
+[triggers]
+crons = ["* * * * *"]
+
+# Create with:  wrangler kv namespace create STONKEX
+# then paste the id it prints here.
+[[kv_namespaces]]
+binding = "STONKEX"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+[vars]
+# A Base RPC. The public endpoint works but rate-limits hard during backfill —
+# an Alchemy or QuickNode URL is worth it. Set a private one as a secret
+# instead:  wrangler secret put RPC_URL
+RPC_URL = "https://mainnet.base.org"
+
+# Guards POST /reset. Set as a secret, not here:
+#   wrangler secret put ADMIN_TOKEN

@@ -1,0 +1,82 @@
+name: Index rewards
+
+# Keeps data/rewards.json current by scanning Base for $STONKEX flows and
+# $STONKEXSTR holders. State lives in data/rewards-state.json, so each run
+# resumes where the last one stopped — a first backfill may take a few runs.
+
+on:
+  schedule:
+    # Deliberately off the :00/:15/:30/:45 boundary — GitHub's scheduler is
+    # heavily oversubscribed there and delays runs the longest.
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:          # lets you kick off a run by hand
+
+concurrency:
+  group: index-rewards        # never let two runs fight over the state file
+  cancel-in-progress: false
+
+permissions:
+  contents: write             # needed to commit the refreshed JSON
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Scan
+        # Optional: set an RPC_URL secret to a private Base endpoint. The public
+        # one works but rate-limits, which just means the backfill takes longer.
+        env:
+          RPC_URL: ${{ secrets.RPC_URL || 'https://mainnet.base.org' }}
+        run: node scripts/index-rewards.mjs
+
+      - name: Commit if anything changed
+        # always(): a partial scan is still progress, and dropping it would mean
+        # a rate-limited RPC could never finish the backfill.
+        if: always()
+        run: |
+          set -u
+          if git diff --quiet -- data/ && git diff --quiet --cached -- data/; then
+            echo "no change"
+            exit 0
+          fi
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # data/ is derived output, regenerated from scratch every run, so it
+          # can never meaningfully conflict — it just has to land on top of
+          # whatever the branch looks like now. Anyone pushing while a scan is
+          # in flight would otherwise get this run rejected, which is exactly
+          # what happened on the first real run.
+          mkdir -p /tmp/idx && cp data/rewards.json data/rewards-state.json /tmp/idx/ 2>/dev/null || true
+
+          for attempt in 1 2 3 4 5; do
+            git fetch origin "$GITHUB_REF_NAME"
+            git reset --hard "origin/$GITHUB_REF_NAME"
+            cp /tmp/idx/rewards.json /tmp/idx/rewards-state.json data/ 2>/dev/null || true
+
+            if git diff --quiet -- data/; then
+              echo "remote already has these totals"
+              exit 0
+            fi
+
+            git add data/
+            git commit -m "chore: refresh reward totals [skip ci]"
+
+            if git push origin HEAD:"$GITHUB_REF_NAME"; then
+              echo "pushed on attempt $attempt"
+              exit 0
+            fi
+
+            echo "push rejected (someone else pushed first) — retrying"
+            sleep $((attempt * 3))
+          done
+
+          echo "could not push after 5 attempts"
+          exit 1

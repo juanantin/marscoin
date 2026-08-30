@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STONKEX Strategy — Stonk Exchange Strategy</title>
+<meta name="description" content="Buy $STONKEXSTR, get $STONKEX. 1B total supply on Base chain. Every trade fuels the strategy — hold $STONKEXSTR and earn $STONKEX.">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="STONKEX Strategy — Stonk Exchange Strategy">
+<meta property="og:description" content="Buy $STONKEXSTR, get $STONKEX. 1B total supply on Base chain.">
+<meta property="og:image" content="images/stonkex_header.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@StonkexStrategy">
+<meta name="theme-color" content="#f7f9fc">
+
+<!-- favicon.ico sits at the root because browsers request /favicon.ico on their
+     own, regardless of these tags. All generated from images/stkstr_icon.png. -->
+<link rel="icon" href="favicon.ico?v=2026-08-29.14" sizes="any">
+<link rel="icon" type="image/png" sizes="64x64" href="images/favicon.png?v=2026-08-29.14">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png?v=2026-08-29.14">
+<link rel="manifest" href="site.webmanifest?v=2026-08-29.14">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="assets/css/styles.css?v=2026-08-29.14">
+</head>
+<body>
+
+<!-- ===================== TOP LINK BAR ===================== -->
+<header class="topbar">
+  <nav class="topbar__inner" aria-label="Primary">
+
+    <a class="pill" id="link-x" href="https://x.com/StonkexStrategy" target="_blank" rel="noopener noreferrer">
+      <svg class="pill__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M17.53 3h3.2l-6.99 7.99L22 21h-6.44l-4.72-6.17L5.4 21H2.2l7.48-8.55L2 3h6.6l4.27 5.64L17.53 3Zm-1.12 16.07h1.77L7.68 4.83H5.78l10.63 14.24Z"/>
+      </svg>
+      <span>X</span>
+    </a>
+
+    <a class="pill" id="link-chart" href="#" target="_blank" rel="noopener noreferrer">
+      <svg class="pill__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M4 20h16v1.6H2.4V2.4H4V20Z"/>
+        <rect x="6.4" y="12" width="2.8" height="6" rx="1" fill="currentColor"/>
+        <rect x="11.2" y="8" width="2.8" height="10" rx="1" fill="currentColor"/>
+        <rect x="16" y="4.4" width="2.8" height="13.6" rx="1" fill="currentColor"/>
+      </svg>
+      <span>CHART</span>
+    </a>
+
+    <div class="ca-wrap">
+      <button class="pill pill--ca" id="copy-ca" type="button" aria-label="Copy contract address">
+        <span class="pill__tag">CA</span>
+        <span class="pill__addr" id="ca-short">0x8a…7f3e</span>
+        <svg class="pill__icon pill__icon--copy" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <rect x="9" y="9" width="11" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M15.5 5.5h-9A2.5 2.5 0 0 0 4 8v9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <div class="toast" id="copy-toast" role="status" aria-live="polite">
+        <svg class="toast__check" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="m7.8 12.3 2.9 2.9 5.5-5.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span id="toast-text">COPIED!</span>
+      </div>
+    </div>
+
+  </nav>
+</header>
+
+<main class="page">
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero" aria-label="STONKEX Strategy — buy $STONKEXSTR, get $STONKEX. 1B total supply on Base chain.">
+    <!-- The poster is the clip's own first frame, so poster → playback is
+         seamless. The source is attached by the script below only when the
+         viewer hasn't asked for reduced motion — otherwise nothing downloads
+         and the poster stands in as a still header. -->
+    <video
+      class="hero__media" id="hero-video"
+      poster="images/stonkex_header_poster.webp"
+      width="768" height="384"
+      autoplay muted loop playsinline preload="none"
+      aria-label="STONKEX Strategy — Stonk Exchange Strategy. Buy $STONKEXSTR, get $STONKEX. 1B total supply, on Base chain."
+      data-src="images/stonkex_header.mp4"></video>
+
+    <script>
+      (function () {
+        var v = document.getElementById('hero-video');
+        var still = !window.matchMedia || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (still) return;
+        v.src = v.dataset.src;
+        v.preload = 'auto';
+        v.load();
+      })();
+    </script>
+
+  </section>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <section class="card dashboard" aria-labelledby="dash-title">
+    <header class="dashboard__head">
+      <h1 class="dashboard__title" id="dash-title">Real rewards. Real growth.</h1>
+      <p class="dashboard__sub">
+        Every trade fuels the strategy. Hold <b class="t-blue">$STONKEXSTR</b> and earn <b class="t-green">$STONKEX</b>.
+      </p>
+    </header>
+
+    <div class="stats" id="stats">
+
+      <!-- Total $STONKEX distributed -->
+      <article class="stat" data-metric="distributed">
+        <div class="stat__head">
+          <span class="stat__icon stat__icon--green" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 2.6 21 7v10l-9 4.4L3 17V7l9-4.4Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M3.3 7.1 12 11.4l8.7-4.3M12 11.4v9.7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>
+          </span>
+          <h2 class="stat__label">Total $STONKEX distributed</h2>
+        </div>
+        <p class="stat__value stat__value--green" data-value="distributed"><span class="dots" role="img" aria-label="Loading"><i></i><i></i><i></i></span></p>
+        <p class="stat__chip stat__chip--usd" data-chip-for="distributedUsd"><b data-value="distributedUsd"><span class="dots" role="img" aria-label="Loading"><i></i><i></i><i></i></span></b> <span>USD</span></p>
+      </article>
+
+      <!-- Total fees collected -->
+      <article class="stat" data-metric="fees">
+        <div class="stat__head">
+          <span class="stat__icon stat__icon--blue" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M12 6.2v11.6M14.9 9.1a3.1 3.1 0 0 0-2.9-1.7c-1.7 0-2.9.9-2.9 2.3 0 3.2 6 1.7 6 4.8 0 1.4-1.3 2.4-3.1 2.4a3.4 3.4 0 0 1-3.2-1.9" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </span>
+          <h2 class="stat__label">Total fees collected</h2>
+        </div>
+        <p class="stat__value" data-value="fees"><span class="dots" role="img" aria-label="Loading"><i></i><i></i><i></i></span></p>
+        <p class="stat__chip stat__chip--token" data-chip-for="feesTokens"><b data-value="feesTokens"><span class="dots" role="img" aria-label="Loading"><i></i><i></i><i></i></span></b> <span>STONKEX</span></p>
+      </article>
+
+      <!-- Total holders -->
+      <article class="stat" data-metric="holders">
+        <div class="stat__head">
+          <span class="stat__icon stat__icon--green" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="9" cy="8.4" r="3.4" fill="currentColor"/><circle cx="17" cy="9.4" r="2.6" fill="currentColor" opacity=".72"/><path d="M2.6 18.6c0-3.1 2.9-5 6.4-5s6.4 1.9 6.4 5v.8H2.6v-.8Z" fill="currentColor"/><path d="M17.1 14.1c2.6.2 4.3 1.8 4.3 4.3v1h-4.3v-5.3Z" fill="currentColor" opacity=".72"/></svg>
+          </span>
+          <h2 class="stat__label">Total holders</h2>
+        </div>
+        <p class="stat__value" data-value="holders"><span class="dots" role="img" aria-label="Loading"><i></i><i></i><i></i></span></p>
+      </article>
+
+      <!-- Market cap -->
+      <article class="stat" data-metric="marketCap">
+        <div class="stat__head">
+          <span class="stat__icon stat__icon--blue" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3.4" y="13" width="4.2" height="7.6" rx="1.4" fill="currentColor"/><rect x="9.9" y="8.4" width="4.2" height="12.2" rx="1.4" fill="currentColor"/><rect x="16.4" y="3.4" width="4.2" height="17.2" rx="1.4" fill="currentColor"/></svg>
+          </span>
+          <h2 class="stat__label">Market cap</h2>
+        </div>
+        <p class="stat__value" data-value="marketCap"><span class="dots" role="img" aria-label="Loading"><i></i><i></i><i></i></span></p>
+      </article>
+
+      <!-- Liquidity -->
+      <article class="stat" data-metric="liquidity">
+        <div class="stat__head">
+          <span class="stat__icon stat__icon--green" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 2.8s6.6 6.6 6.6 11a6.6 6.6 0 1 1-13.2 0c0-4.4 6.6-11 6.6-11Z" fill="currentColor"/></svg>
+          </span>
+          <h2 class="stat__label">Liquidity</h2>
+        </div>
+        <p class="stat__value" data-value="liquidity"><span class="dots" role="img" aria-label="Loading"><i></i><i></i><i></i></span></p>
+      </article>
+
+      <!-- 24h volume -->
+      <article class="stat" data-metric="volume24h">
+        <div class="stat__head">
+          <span class="stat__icon stat__icon--blue" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3.4 16.2 9 10.6l3.6 3.6 5.4-5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.6 8.2h5v5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <h2 class="stat__label">24h volume</h2>
+        </div>
+        <p class="stat__value" data-value="volume24h"><span class="dots" role="img" aria-label="Loading"><i></i><i></i><i></i></span></p>
+      </article>
+
+    </div>
+
+    <p class="dashboard__note" id="dash-note" aria-live="polite"></p>
+  </section>
+
+  <!-- ===================== PARTNERS ===================== -->
+  <section class="card partners" aria-label="Ecosystem">
+
+    <a class="partner" href="https://www.thestonks.exchange/" target="_blank" rel="noopener noreferrer">
+      <img class="partner__art" src="images/launched.png" alt="" width="400" height="400" loading="lazy" decoding="async">
+      <span class="partner__copy">
+        <span class="partner__kicker">Launched in</span>
+        <span class="partner__brand">
+          <img src="images/stonkex_button.png" alt="Stonks.Exchange" width="550" height="112" loading="lazy" decoding="async">
+        </span>
+      </span>
+    </a>
+
+    <a class="partner" href="https://www.stockify.finance/" target="_blank" rel="noopener noreferrer">
+      <img class="partner__art" src="images/rewards.png" alt="" width="400" height="346" loading="lazy" decoding="async">
+      <span class="partner__copy">
+        <span class="partner__kicker">Holders rewards powered by</span>
+        <span class="partner__brand">
+          <img src="images/stockify_logo.png" alt="Stockify" width="800" height="261" loading="lazy" decoding="async">
+        </span>
+      </span>
+    </a>
+
+  </section>
+
+  <footer class="foot">
+    <p class="foot__fine">Not financial advice. Crypto assets are volatile — do your own research.</p>
+  </footer>
+
+</main>
+
+<!-- ?v= is the cache buster: bump BUILD in both files on every deploy,
+     or a CDN will keep serving the previous config.js and app.js. -->
+<script src="config.js?v=2026-08-29.14"></script>
+<script src="assets/js/app.js?v=2026-08-29.14"></script>
+</body>
+</html>
